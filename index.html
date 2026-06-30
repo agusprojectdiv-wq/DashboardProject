@@ -145,6 +145,1453 @@
   .pie-svg-wrapper { position: relative; width: 90px; height: 90px; }
   .pie-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 9px; font-weight: bold; color: #ea580c; pointer-events: none; line-height: 1.1; }
   .pie-legends { font-size: 9px; margin-top: 8px; width: 100%; display: flex; flex-direction: column; gap: 2px; }
+  .pie-empty-note { font-style: italic; font-size: 9px; color: #b45309; text-align: center; line-height: 1.3; opacity: .85; }
+  .legend-item { display: flex; justify-content: space-between; align-items: center; }
+  .legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+  .dash-card table th { background-color: #ffedd5 !important; color: #c2410c !important; }
+  .photo-grid-out { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .photo-out-item { border: 1px solid #fed7aa; border-radius: 4px; padding: 5px; background: #fff; text-align: center; }
+  .photo-out-img { width: 100%; height: 130px; object-fit: cover; border-radius: 3px; background: #ffedd5; }
+  .photo-out-lbl { font-size: 10px; margin-top: 6px; font-weight: 600; color: #475569; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .report-footer { text-align:center; margin-top:35px; font-size:12px; color:#1e293b; page-break-inside: avoid; }
+  .report-footer-locdate { font-weight:600; }
+  .report-footer-pmname { font-weight:700; }
+  .report-footer-pmrole { color:#64748b; }
+  .curves-display-container { display: grid; grid-template-columns: 1.3fr 1fr; gap: 15px; align-items: start; }
+  .back-bar { background: #ffedd5; padding: 10px; display: flex; justify-content: space-between; align-items:center; margin-bottom: 15px; border-radius: 4px; color: #c2410c; border: 1px solid #fed7aa; flex-wrap:wrap; gap:8px; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 10mm 10mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+    html, body { background: #fff !important; padding: 0 !important; margin: 0 !important; width: 210mm; }
+    header, nav, .no-print { display: none !important; }
+    main{ max-width:none !important; padding:0 !important; margin:0 !important; }
+    .page{ display:none !important; }
+    .page.active{ display:block !important; }
+    #dashboardOutputView{ padding: 0 !important; }
+    .dash-score-bright-box { background-color: #f97316 !important; color: #ffffff !important; }
+    .dash-meta-grid { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 5px !important; margin-bottom: 15px !important; width: 100% !important; page-break-inside: avoid; }
+    .dash-meta-item { flex: 1 1 0% !important; min-width: 0 !important; border: 1px solid #cbd5e1 !important; background-color: transparent !important; box-shadow: none !important; padding: 6px 8px !important; page-break-inside: avoid; }
+    .dash-meta-item strong { color: #475569 !important; font-size: 8px !important; margin-bottom: 2px !important; }
+    .dash-meta-item span { color: #000000 !important; font-size: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .dash-card { page-break-inside: avoid; background-color: #fffaf5 !important; margin-bottom: 15px; }
+    .pie-container { background: #fffaf5 !important; }
+    .dash-logo-container { border: 1px solid #cbd5e1 !important; }
+    .input-table th { background-color: #ffedd5 !important; color: #c2410c !important; }
+    #page-home .filter-bar { display: none !important; }
+    #page-home .grid-stats { page-break-inside: avoid; }
+    #page-home .stat-card { page-break-inside: avoid; }
+    #page-home .card { page-break-inside: avoid; box-shadow: none !important; }
+    #page-home .charts-row { page-break-inside: avoid; }
+  }
+
+  @media(max-width:600px){
+    .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    header{flex-direction:column;align-items:stretch;}
+    nav{justify-content:center;}
+  }
+</style>
+</head>
+<body>
+
+<header class="no-print">
+  <h1>Manajemen Project Donatur</h1>
+  <nav>
+    <button class="active" data-page="home" onclick="showPage('home')">Home</button>
+    <button data-page="input" id="navInput" style="display:none;" onclick="showPage('input')">Input Project Baru</button>
+    <button data-page="running" onclick="showPage('running')">Project Berjalan</button>
+    <button data-page="finish" onclick="showPage('finish')">Project Finish</button>
+    <button data-page="report" id="navReport" style="display:none;" onclick="showPage('report')">Laporan</button>
+    <button data-page="update" id="navUpdate" style="display:none;" onclick="showPage('update')">Update project</button>
+    <button id="navLogin" onclick="openLoginModal()">&#128274; Login admin</button>
+    <button id="navLogout" style="display:none;" onclick="doLogout()">&#128275; Logout (advisor)</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============ HOME PAGE ============ -->
+  <div class="page active" id="page-home">
+    <div class="grid-stats" id="statsContainer"></div>
+
+    <div class="charts-row">
+      <div class="card">
+        <h2>Progress project (top 8)</h2>
+        <div class="chart-wrap"><canvas id="chartProgress"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Distribusi jenis project</h2>
+        <div class="chart-wrap"><canvas id="chartJenis"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Project per lokasi</h2>
+      <div class="chart-wrap" style="height:180px;"><canvas id="chartLokasi"></canvas></div>
+    </div>
+
+    <div class="card">
+      <h2>Rekap project</h2>
+      <div class="filter-bar">
+        <select id="filterDonatur" onchange="renderHome()"><option value="">Semua donatur</option></select>
+        <select id="filterLokasi" onchange="renderHome()"><option value="">Semua lokasi</option></select>
+        <select id="filterMonev" onchange="renderHome()"><option value="">Semua nama monev</option></select>
+        <select id="filterJenis" onchange="renderHome()"><option value="">Semua jenis project</option></select>
+        <select id="filterStatus" onchange="renderHome()">
+          <option value="">Semua status project</option>
+          <option value="running">Berjalan</option>
+          <option value="finished">Selesai</option>
+        </select>
+      </div>
+      <div id="homeTableWrap"></div>
+    </div>
+
+    <div class="no-print" style="text-align:center; margin: 10px 0 20px;">
+      <button class="meal-btn meal-btn-pdf" onclick="printHomePage()">&#128424; Cetak halaman Home (PDF A4)</button>
+    </div>
+  </div>
+
+  <!-- ============ INPUT PROJECT BARU (form MEAL lengkap) ============ -->
+  <div class="page" id="page-input">
+    <div class="meal-card-box">
+      <div class="meal-header-app">
+        <h2 id="inputFormTitle">Input project baru &mdash; Formulir data MEAL &amp; Kurva S</h2>
+        <p id="inputFormDesc">Lengkapi data umum, progres aktivitas, KPI, demografi penerima manfaat, kurva S bulanan, jadwal, kendala, lesson learned, dan stakeholder.</p>
+      </div>
+      <div id="inputFormMount"></div>
+    </div>
+  </div>
+
+  <!-- ============ PROJECT BERJALAN ============ -->
+  <div class="page" id="page-running">
+    <div class="card">
+      <h2>Project berjalan</h2>
+      <div id="runningTableWrap"></div>
+    </div>
+  </div>
+
+  <!-- ============ PROJECT FINISH ============ -->
+  <div class="page" id="page-finish">
+    <div class="card">
+      <h2>Project finish</h2>
+      <div id="finishTableWrap"></div>
+    </div>
+  </div>
+
+  <!-- ============ HALAMAN UPDATE PROJECT (form lengkap, prefix upd_) ============ -->
+  <div class="page" id="page-update">
+    <div class="back-bar no-print">
+      <span><strong>Update project</strong> &mdash; ubah data lalu klik save untuk menyimpan sebagai update bulan ini.</span>
+      <button class="meal-btn meal-btn-secondary" onclick="cancelUpdatePage()">&larr; Batal</button>
+    </div>
+    <div class="meal-card-box">
+      <div class="meal-header-app">
+        <h2 id="updatePageTitle">Update project</h2>
+        <p>Perbarui data umum, progres aktivitas, KPI, demografi, kurva S, jadwal, kendala, lesson learned, dan stakeholder.</p>
+      </div>
+      <div id="updateFormMount"></div>
+    </div>
+  </div>
+
+  <!-- ============ HALAMAN LAPORAN (output MEAL) ============ -->
+  <div class="page" id="page-report">
+    <div class="back-bar no-print">
+      <span><strong>Laporan project</strong> &mdash; tampilan siap cetak.</span>
+      <div>
+        <button class="meal-btn meal-btn-secondary" onclick="goBackFromReport()">&larr; Kembali</button>
+        <button class="meal-btn meal-btn-pdf" onclick="window.print()">Cetak laporan</button>
+      </div>
+    </div>
+
+    <div id="dashboardOutputView" class="meal-card-box printing">
+      <div class="dash-header-wrapper">
+        <div class="dash-header-left">
+          <div class="dash-title-main" id="view_project_title">NAMA PROYEK</div>
+          <div class="dash-title-sub">Laporan akumulasi MEAL &amp; pemantauan program terpadu</div>
+          <div class="dash-score-bright-box" id="view_project_score">TOTAL CAPAIAN PROGRAM: -</div>
+        </div>
+        <div class="dash-header-logos">
+          <div class="dash-logo-container" id="container_logo_rz_out"><span class="dash-logo-placeholder">Logo lembaga</span></div>
+          <div class="dash-logo-container" id="container_logo_mitra_out"><span class="dash-logo-placeholder">Mitra</span></div>
+        </div>
+      </div>
+
+      <div class="dash-meta-grid">
+        <div class="dash-meta-item"><strong>Nama proyek</strong><span id="view_box_project_name">-</span></div>
+        <div class="dash-meta-item"><strong>Lembaga donor</strong><span id="view_donor">-</span></div>
+        <div class="dash-meta-item"><strong>Nilai proyek</strong><span id="view_project_value" style="font-weight:700; color:#ea580c;">-</span></div>
+        <div class="dash-meta-item"><strong>Masa kerja</strong><span id="view_project_duration" style="font-weight:600;">-</span></div>
+        <div class="dash-meta-item"><strong>Periode lap.</strong><span id="view_report_period" style="font-weight:700; color:#ea580c;">-</span></div>
+        <div class="dash-meta-item"><strong>Wilayah</strong><span id="view_location">-</span></div>
+        <div class="dash-meta-item"><strong>PM PIC</strong><span id="view_pm">-</span></div>
+      </div>
+
+      <div class="dash-section-container">
+        <div class="dash-card">
+          <div class="dash-card-title">1. Pelaksanaan progres aktivitas proyek</div>
+          <table class="input-table" id="view_table_act" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Komponen deskripsi kerja lapangan</th><th style="width:20%;">Progres aktual</th><th style="width:25%;">Status kerja</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">2. Indikator utama kinerja kerja (KPI Logframe)</div>
+          <div class="kpi-percent-box" id="view_kpi_summary_percentage">RATA-RATA EFEKTIVITAS SASARAN KPI: 0%</div>
+          <table class="input-table" id="view_table_kpi" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Indikator sasaran kerja</th><th>Target</th><th>Realisasi</th><th>Efektivitas capaian</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">3. Diagram kuantitatif demografi penerima manfaat</div>
+          <div class="pie-charts-grid" id="view_pie_root"></div>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">4. Grafik visual &amp; tabel capaian kurva S berdasarkan bulan</div>
+          <div class="curves-display-container">
+            <div style="text-align:center; background:#fff; border:1px solid #fed7aa; padding:15px 10px; border-radius:4px; min-height: 200px; display:flex; flex-direction:column; justify-content:center;">
+              <svg id="svg_curve_s" viewBox="0 0 480 180" style="width:100%; height:auto; overflow:visible;"></svg>
+              <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:15px; border-top:1px dashed #fed7aa; padding-top:8px;">
+                <span><span style="display:inline-block; width:12px; height:4px; background:#ea580c; margin-right:5px; border-radius:2px;"></span>Target rencana akumulatif</span>
+                <span><span style="display:inline-block; width:12px; height:4px; background:#f97316; margin-right:5px; border-radius:2px;"></span>Realisasi aktual akumulatif</span>
+              </div>
+            </div>
+            <div>
+              <table class="input-table" id="view_table_curves_summary" style="margin-top:0; font-size:11px;">
+                <thead><tr><th>Bulan kerja</th><th>Target (%)</th><th>Realisasi (%)</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="curve-footnote" id="view_curve_footnote"></div>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">5. Rencana jadwal agenda kegiatan terdekat (milestone)</div>
+          <table class="input-table" id="view_table_sch" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Nama agenda kegiatan</th><th style="width:25%;">Tanggal strategis</th><th>Keterangan operasional</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">6. Matriks kendala &amp; tantangan utama lapangan</div>
+          <table class="input-table" id="view_table_challenges" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Tantangan / risiko kritis</th><th style="width:12%;">Dampak</th><th>Mitigasi taktis lapangan</th><th style="width:12%;">Status</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">7. Pembelajaran teridentifikasi (lesson learned MEAL)</div>
+          <table class="input-table" id="view_table_lessons" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Pembelajaran utama kontekstual</th><th>Rekomendasi / rencana aksi strategis</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">8. Aliansi pemangku kepentingan &amp; mitra kerja</div>
+          <table class="input-table" id="view_table_sh" style="margin-top:0; font-size:11px;">
+            <thead><tr><th>Nama instansi lembaga</th><th>Peran makro</th><th>Kontribusi konkret lapangan</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="dash-card">
+          <div class="dash-card-title">9. Dokumentasi visual aktivitas proyek</div>
+          <div class="photo-grid-out" id="view_photo_grid"></div>
+        </div>
+      </div>
+
+      <div class="report-footer">
+        <div id="view_footer_locdate" class="report-footer-locdate">-</div>
+        <div style="height:14px;"></div>
+        <div id="view_footer_pm_name" class="report-footer-pmname">-</div>
+        <div id="view_footer_pm_role" class="report-footer-pmrole">Project Advisor</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+
+
+<!-- MODAL: HISTORY VIEW -->
+<div class="modal-overlay no-print" id="historyModal" style="position:fixed;inset:0;background:rgba(45,30,60,.45);display:none;align-items:center;justify-content:center;z-index:50;">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;">
+    <h3 id="historyModalTitle" style="margin:0 0 16px;font-size:17px;color:#7c5cff;">Riwayat update</h3>
+    <div id="historyList"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+      <button class="btn-outline" onclick="closeHistoryModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay no-print" id="loginModal" style="position:fixed;inset:0;background:rgba(45,30,60,.45);display:none;align-items:center;justify-content:center;z-index:60;">
+  <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:380px;">
+    <h3 style="margin:0 0 6px;font-size:17px;color:#7c5cff;">Login admin</h3>
+    <p style="margin:0 0 16px;font-size:13px;color:#8a8378;">Masuk untuk mengakses Input Project Baru dan fitur pengelolaan lengkap.</p>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:13px;color:#8a8378;margin-bottom:6px;font-weight:600;">Username</label>
+      <input type="text" id="login_username" autocomplete="username" style="width:100%;padding:10px 12px;border:1.5px solid #f0e6da;border-radius:10px;font-size:14px;" onkeydown="if(event.key==='Enter')document.getElementById('login_password').focus()">
+    </div>
+    <div style="margin-bottom:6px;">
+      <label style="display:block;font-size:13px;color:#8a8378;margin-bottom:6px;font-weight:600;">Password</label>
+      <input type="password" id="login_password" autocomplete="current-password" style="width:100%;padding:10px 12px;border:1.5px solid #f0e6da;border-radius:10px;font-size:14px;" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div id="loginError" style="color:#dc2626;font-size:12px;min-height:18px;margin-top:4px;"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+      <button class="btn-outline" onclick="closeLoginModal()">Batal</button>
+      <button class="btn" onclick="doLogin()">Masuk</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'pm_projects_v2';
+  let projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  let activeProjectId = null;
+  let reportProjectId = null;
+  let isAdmin = false;
+  const ADMIN_USER = 'advisor';
+  const ADMIN_PASS = 'akukuat';
+
+  function openLoginModal(){
+    document.getElementById('login_username').value = '';
+    document.getElementById('login_password').value = '';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginModal').style.display = 'flex';
+    setTimeout(()=>document.getElementById('login_username').focus(), 50);
+  }
+  function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
+  function doLogin(){
+    const u = document.getElementById('login_username').value.trim();
+    const p = document.getElementById('login_password').value;
+    if(u===ADMIN_USER && p===ADMIN_PASS){
+      isAdmin = true;
+      closeLoginModal();
+      applyAuthUI();
+    } else {
+      document.getElementById('loginError').textContent = 'Username atau password salah.';
+    }
+  }
+  function doLogout(){
+    if(!confirm('Keluar dari mode admin?')) return;
+    isAdmin = false;
+    applyAuthUI();
+    showPage('home');
+  }
+  function applyAuthUI(){
+    document.getElementById('navInput').style.display = isAdmin ? 'inline-block' : 'none';
+    document.getElementById('navLogin').style.display = isAdmin ? 'none' : 'inline-block';
+    document.getElementById('navLogout').style.display = isAdmin ? 'inline-block' : 'none';
+    document.body.classList.toggle('is-admin', isAdmin);
+    renderRunning();
+    renderFinish();
+    if(!isAdmin){
+      const curActive = document.querySelector('.page.active');
+      if(curActive && ['input','update'].includes(curActive.id.replace('page-',''))){
+        document.getElementById('navUpdate').style.display = 'none';
+        showPage('home');
+      }
+    }
+  }
+  let chartProgressInst, chartJenisInst, chartLokasiInst;
+  const palette = ['#7c5cff','#0fb88a','#ff7a5c','#3a8dff','#ffb02e','#ff5c8a','#36c5d4','#9b6bff'];
+  const imageCache = {};
+
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
+  function uid(){ return 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
+  function esc(v){ return (v===undefined||v===null) ? '' : String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
+  function fmtBulan(ym){
+    if(!ym) return '-';
+    const [y,m] = ym.split('-');
+    const bulanList = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    return bulanList[parseInt(m,10)-1] + ' ' + y;
+  }
+  function fmtTanggal(d){
+    if(!d) return '-';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+  }
+
+  /* ============ NAVIGATION ============ */
+  function printHomePage(){
+    showPage('home');
+    setTimeout(()=>window.print(), 150);
+  }
+
+  function showPage(name){
+    if((name==='input' || name==='update') && !isAdmin){
+      openLoginModal();
+      return;
+    }
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+name).classList.add('active');
+    document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.page===name));
+    if(name==='home') renderHome();
+    if(name==='running') renderRunning();
+    if(name==='finish') renderFinish();
+    if(name==='input') renderInputForm();
+  }
+
+  function statusBadge(progress){
+    if(progress>=100) return '<span class="badge green">Selesai</span>';
+    if(progress>=50) return '<span class="badge amber">Berjalan</span>';
+    return '<span class="badge red">Baru mulai</span>';
+  }
+
+  /* ============ HOME DASHBOARD ============ */
+  function populateFilters(){
+    const donaturSel = document.getElementById('filterDonatur');
+    const lokasiSel = document.getElementById('filterLokasi');
+    const jenisSel = document.getElementById('filterJenis');
+    const monevSel = document.getElementById('filterMonev');
+    const cur = {d:donaturSel.value, l:lokasiSel.value, j:jenisSel.value, m:monevSel.value};
+    const donaturs = [...new Set(projects.map(p=>p.donatur).filter(Boolean))];
+    const lokasis = [...new Set(projects.map(p=>p.lokasi).filter(Boolean))];
+    const jenises = [...new Set(projects.map(p=>p.jenis).filter(Boolean))];
+    const monevs = [...new Set(projects.map(p=>p.monevCategory).filter(Boolean))];
+    donaturSel.innerHTML = '<option value="">Semua donatur</option>' + donaturs.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    lokasiSel.innerHTML = '<option value="">Semua lokasi</option>' + lokasis.map(l=>`<option value="${esc(l)}">${esc(l)}</option>`).join('');
+    jenisSel.innerHTML = '<option value="">Semua jenis project</option>' + jenises.map(j=>`<option value="${esc(j)}">${esc(j)}</option>`).join('');
+    monevSel.innerHTML = '<option value="">Semua nama monev</option>' + monevs.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    donaturSel.value = cur.d; lokasiSel.value = cur.l; jenisSel.value = cur.j; monevSel.value = cur.m;
+  }
+
+  function totalPenerimaManfaat(p){
+    const d = p.demografi || {};
+    return (Number(d.male)||0) + (Number(d.female)||0);
+  }
+
+  function renderStats(){
+    const total = projects.length;
+    const selesai = projects.filter(p=>p.finished).length;
+    const berjalan = projects.filter(p=>!p.finished).length;
+    const donaturCount = new Set(projects.map(p=>p.donatur).filter(Boolean)).size;
+    const totalDana = projects.reduce((s,p)=>s+(Number(p.target)||0),0);
+    const totalPenerima = projects.reduce((s,p)=>s+totalPenerimaManfaat(p),0);
+    document.getElementById('statsContainer').innerHTML = `
+      <div class="stat-card stat-c1"><div class="label">Total project</div><div class="value">${total}</div><div class="icon">&#128202;</div></div>
+      <div class="stat-card stat-c2"><div class="label">Project berjalan</div><div class="value">${berjalan}</div><div class="icon">&#9203;</div></div>
+      <div class="stat-card stat-c3"><div class="label">Project selesai</div><div class="value">${selesai}</div><div class="icon">&#9989;</div></div>
+      <div class="stat-card stat-c4"><div class="label">Jumlah donatur</div><div class="value">${donaturCount}</div><div class="icon">&#129309;</div></div>
+      <div class="stat-card stat-c5"><div class="label">Total target dana</div><div class="value" style="font-size:17px;">${fmtRupiah(totalDana)}</div><div class="icon">&#128176;</div></div>
+      <div class="stat-card" style="background:linear-gradient(135deg,#ff5c8a,#ffa3bb);"><div class="label">Penerima manfaat</div><div class="value">${totalPenerima.toLocaleString('id-ID')}</div><div class="icon">&#128101;</div></div>
+    `;
+  }
+
+  function renderCharts(){
+    const ctx1 = document.getElementById('chartProgress').getContext('2d');
+    const top = projects.slice(0,8);
+    if(chartProgressInst) chartProgressInst.destroy();
+    chartProgressInst = new Chart(ctx1, {
+      type:'bar',
+      data:{
+        labels: top.map(p=>(p.nama||'-').length>16 ? p.nama.slice(0,16)+'…' : (p.nama||'-')),
+        datasets:[{ label:'Progress (%)', data: top.map(p=>p.progress||0), backgroundColor: top.map((_,i)=>palette[i%palette.length]), borderRadius:8, maxBarThickness:36 }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ min:0, max:100, ticks:{stepSize:25} } } }
+    });
+
+    const jenisMap = {};
+    projects.forEach(p=>{ const j = p.jenis || 'Lainnya'; jenisMap[j] = (jenisMap[j]||0)+1; });
+    const ctx2 = document.getElementById('chartJenis').getContext('2d');
+    if(chartJenisInst) chartJenisInst.destroy();
+    chartJenisInst = new Chart(ctx2, {
+      type:'doughnut',
+      data:{ labels: Object.keys(jenisMap), datasets:[{ data: Object.values(jenisMap), backgroundColor: Object.keys(jenisMap).map((_,i)=>palette[i%palette.length]), borderWidth:0 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ boxWidth:12, font:{size:11} } } } }
+    });
+
+    const lokasiMap = {};
+    projects.forEach(p=>{ const l = p.lokasi || 'Lainnya'; lokasiMap[l] = (lokasiMap[l]||0)+1; });
+    const ctx3 = document.getElementById('chartLokasi').getContext('2d');
+    if(chartLokasiInst) chartLokasiInst.destroy();
+    chartLokasiInst = new Chart(ctx3, {
+      type:'bar',
+      data:{ labels: Object.keys(lokasiMap), datasets:[{ label:'Jumlah project', data: Object.values(lokasiMap), backgroundColor: '#3a8dff', borderRadius:8, maxBarThickness:40 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{stepSize:1, precision:0} } } }
+    });
+  }
+
+  function renderHome(){
+    populateFilters();
+    renderStats();
+    renderCharts();
+    const fd = document.getElementById('filterDonatur').value;
+    const fl = document.getElementById('filterLokasi').value;
+    const fm = document.getElementById('filterMonev').value;
+    const fj = document.getElementById('filterJenis').value;
+    const fs = document.getElementById('filterStatus').value;
+    let list = projects.filter(p =>
+      (!fd || p.donatur===fd) &&
+      (!fl || p.lokasi===fl) &&
+      (!fm || p.monevCategory===fm) &&
+      (!fj || p.jenis===fj) &&
+      (!fs || (fs==='running' ? !p.finished : p.finished))
+    );
+    const wrap = document.getElementById('homeTableWrap');
+    if(list.length===0){
+      wrap.innerHTML = '<div class="empty"><div class="big-icon">&#128203;</div>Tidak ada project yang cocok dengan filter, atau belum ada project. Buka menu "Input Project Baru" untuk menambahkan.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="dashtable">
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Jenis</th><th>Lokasi</th><th>Penerima manfaat</th><th>Progress</th><th>Status</th></tr></thead>
+        <tbody>
+          ${list.map(p=>`
+            <tr>
+              <td><span class="project-title-link" onclick="openReport('${p.id}')">${p.nama||'-'}</span></td>
+              <td>${p.donatur||'-'}</td>
+              <td>${p.jenis||'-'}</td>
+              <td>${p.lokasi||'-'}</td>
+              <td>${totalPenerimaManfaat(p).toLocaleString('id-ID')}</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
+                  <span class="progress-text">${p.progress||0}%</span>
+                </div>
+              </td>
+              <td>${statusBadge(p.progress||0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  /* ============ PROJECT BERJALAN / FINISH ============ */
+  function renderRunning(){
+    const wrap = document.getElementById('runningTableWrap');
+    const list = projects.filter(p=>!p.finished);
+    if(list.length===0){
+      wrap.innerHTML = '<div class="empty"><div class="big-icon">&#128203;</div>Belum ada project berjalan. Tambahkan project baru di menu Input Project Baru.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="dashtable">
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Lokasi</th><th>Progress</th><th>Update terakhir</th><th>Aksi</th></tr></thead>
+        <tbody>
+          ${list.map(p=>{
+            const hist = p.history||[];
+            const last = hist.length ? hist[hist.length-1] : null;
+            return `
+            <tr>
+              <td><strong>${p.nama||'-'}</strong></td>
+              <td>${p.donatur||'-'}</td>
+              <td>${p.lokasi||'-'}</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
+                  <span class="progress-text">${p.progress||0}%</span>
+                </div>
+              </td>
+              <td>${last ? fmtBulan(last.bulan) : '-'}</td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn-small" onclick="openReport('${p.id}')">Lihat laporan</button>
+                  <button class="btn-small" onclick="openHistoryModal('${p.id}')">Riwayat</button>
+                  ${isAdmin ? `
+                  <button class="btn-small" onclick="openUpdatePage('${p.id}')">Update</button>
+                  <button class="btn-small teal" onclick="finishProject('${p.id}')">Tandai selesai</button>
+                  <button class="btn-small danger" onclick="deleteProject('${p.id}')">Hapus</button>` : ''}
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderFinish(){
+    const wrap = document.getElementById('finishTableWrap');
+    const list = projects.filter(p=>p.finished);
+    if(list.length===0){
+      wrap.innerHTML = '<div class="empty"><div class="big-icon">&#9989;</div>Belum ada project yang selesai. Project akan muncul di sini setelah ditandai selesai dari menu Project Berjalan.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="dashtable">
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Lokasi</th><th>Progress</th><th>Tanggal selesai</th><th>Aksi</th></tr></thead>
+        <tbody>
+          ${list.map(p=>`
+            <tr>
+              <td><strong>${p.nama||'-'}</strong></td>
+              <td>${p.donatur||'-'}</td>
+              <td>${p.lokasi||'-'}</td>
+              <td>
+                <div class="progress-wrap">
+                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
+                  <span class="progress-text">${p.progress||0}%</span>
+                </div>
+              </td>
+              <td>${p.finishedAt || '-'}</td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn-small" onclick="openReport('${p.id}')">Lihat laporan</button>
+                  <button class="btn-small" onclick="openHistoryModal('${p.id}')">Riwayat</button>
+                  ${isAdmin ? `
+                  <button class="btn-small" onclick="reopenProject('${p.id}')">Kembalikan</button>
+                  <button class="btn-small danger" onclick="deleteProject('${p.id}')">Hapus</button>` : ''}
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function finishProject(id){
+    if(!isAdmin) return;
+    const p = projects.find(x=>x.id===id);
+    if(!p) return;
+    if(!confirm('Tandai project "'+p.nama+'" sebagai selesai? Project akan dipindahkan ke menu Project Finish.')) return;
+    p.finished = true;
+    p.progress = 100;
+    p.finishedAt = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+    save(); renderRunning(); renderFinish();
+  }
+  function reopenProject(id){
+    if(!isAdmin) return;
+    const p = projects.find(x=>x.id===id);
+    if(!p) return;
+    p.finished = false;
+    p.finishedAt = null;
+    save(); renderRunning(); renderFinish();
+  }
+  function deleteProject(id){
+    if(!isAdmin) return;
+    if(!confirm('Hapus project ini? Semua riwayat dan data laporan akan ikut terhapus.')) return;
+    projects = projects.filter(p=>p.id!==id);
+    save(); renderRunning(); renderFinish(); renderHome();
+  }
+
+  /* ============ HISTORY VIEW ============ */
+  function openHistoryModal(id){
+    const p = projects.find(x=>x.id===id);
+    document.getElementById('historyModalTitle').textContent = 'Riwayat update: ' + p.nama;
+    const hist = (p.history||[]).slice().reverse();
+    document.getElementById('historyList').innerHTML = hist.length ? hist.map(h=>`
+      <div style="border:1.5px solid #f0e6da;border-radius:10px;padding:12px 14px;margin-bottom:8px;font-size:13px;background:#fffaf2;">
+        <div style="display:flex;justify-content:space-between;font-weight:700;margin-bottom:4px;"><span style="color:#7c5cff;">${fmtBulan(h.bulan)}</span><span style="color:#0fb88a;">${h.progress}%</span></div>
+        <div>${h.catatan ? h.catatan : '<em style="color:#8a8378">Tidak ada catatan</em>'}</div>
+      </div>
+    `).join('') : '<div class="empty">Belum ada riwayat update.</div>';
+    document.getElementById('historyModal').style.display = 'flex';
+  }
+  function closeHistoryModal(){ document.getElementById('historyModal').style.display = 'none'; }
+
+  /* ============ TEMPLATE FORM MEAL (reusable, berbasis prefix) ============ */
+  function tableId(prefix, base){ return prefix + '_' + base; }
+
+  function activityRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="act_name" value="${v.act_name||''}"></td><td><input type="number" name="act_prog" min="0" max="100" value="${v.act_prog||''}"></td><td><select name="act_status"><option value="Selesai" ${v.act_status==='Selesai'?'selected':''}>Selesai</option><option value="On Track" ${v.act_status==='On Track'?'selected':''}>On Track</option></select></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function kpiRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="kpi_name" value="${v.kpi_name||''}"></td><td><input type="number" name="kpi_target" value="${v.kpi_target||''}"></td><td><input type="number" name="kpi_real" value="${v.kpi_real||''}"></td><td><input type="text" name="kpi_unit" value="${v.kpi_unit||''}"></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function curveMonthOptions(selected){
+    const months = [['Jan','Januari'],['Feb','Februari'],['Mar','Maret'],['Apr','April'],['Mei','Mei'],['Jun','Juni'],['Jul','Juli'],['Agu','Agustus'],['Sep','September'],['Okt','Oktober'],['Nov','November'],['Des','Desember']];
+    return months.map(([val,label])=>`<option value="${val}" ${selected===val?'selected':''}>${label}</option>`).join('');
+  }
+  function curveRowHtml(prefix, v){
+    v = v || {};
+    return `<td><select name="curve_month">${curveMonthOptions(v.curve_month)}</select></td><td><input type="number" step="0.1" name="curve_p" value="${v.curve_p||''}"></td><td><input type="number" step="0.1" name="curve_a" value="${v.curve_a||''}"></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function scheduleRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="sch_name" value="${v.sch_name||''}"></td><td><input type="text" name="sch_date" value="${v.sch_date||''}"></td><td><input type="text" name="sch_desc" value="${v.sch_desc||''}"></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function challengeRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="ch_risk" value="${v.ch_risk||''}"></td><td><select name="ch_impact"><option value="Sedang" ${v.ch_impact==='Sedang'?'selected':''}>Sedang</option><option value="Tinggi" ${v.ch_impact==='Tinggi'?'selected':''}>Tinggi</option><option value="Besar" ${v.ch_impact==='Besar'?'selected':''}>Besar</option></select></td><td><input type="text" name="ch_mitigation" value="${v.ch_mitigation||''}"></td><td><select name="ch_status"><option value="Open" ${v.ch_status==='Open'?'selected':''}>Open</option><option value="Closed" ${v.ch_status==='Closed'?'selected':''}>Closed</option></select></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function lessonRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="ls_main" value="${v.ls_main||''}"></td><td><input type="text" name="ls_rec" value="${v.ls_rec||''}"></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+  function stakeholderRowHtml(prefix, v){
+    v = v || {};
+    return `<td><input type="text" name="sh_name" value="${v.sh_name||''}"></td><td><input type="text" name="sh_role" value="${v.sh_role||''}"></td><td><input type="text" name="sh_act" value="${v.sh_act||''}"></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+  }
+
+  const rowBuilders = {
+    activity: activityRowHtml, kpi: kpiRowHtml, curve: curveRowHtml,
+    schedule: scheduleRowHtml, challenge: challengeRowHtml, lesson: lessonRowHtml, stakeholder: stakeholderRowHtml
+  };
+
+  function rowsHtml(prefix, kind, list){
+    const builder = rowBuilders[kind];
+    if(!list || list.length===0) return `<tr>${builder(prefix, null)}</tr>`;
+    return list.map(item=>`<tr>${builder(prefix, item)}</tr>`).join('');
+  }
+
+  function photoCardHtml(prefix, idx, photo){
+    photo = photo || {};
+    const imgId = `${prefix}_prev_img_${idx}`, txtId = `${prefix}_text_prev_${idx}`, lblId = `${prefix}_lbl_img_${idx}`;
+    const hasData = !!photo.data;
+    return `
+      <div class="photo-card">
+        <img id="${imgId}" class="photo-preview" src="${photo.data||''}" style="${hasData?'':'display:none;'}">
+        <div id="${txtId}" class="photo-preview" style="${hasData?'display:none;':''}">Belum ada foto ${idx}</div>
+        <input type="file" accept="image/*" onchange="previewImage(this, '${imgId}', '${txtId}')">
+        <input type="text" id="${lblId}" placeholder="Label keterangan foto ${idx}" value="${photo.label||''}" style="width:100%; margin-top:5px; padding:4px; font-size:11px;">
+      </div>`;
+  }
+
+  function excelUploadButton(prefix, tableElId, kind, sheetName){
+    const inputId = tableElId + '_xlsx';
+    return `<input type="file" id="${inputId}" accept=".xlsx,.xls" style="display:none;" onchange="handleExcelUpload(this,'${tableElId}','${kind}','${sheetName}')">
+      <button type="button" class="meal-btn meal-btn-secondary" style="font-size:11px; padding:5px 10px;" onclick="document.getElementById('${inputId}').click()">&#128229; Upload dari Excel</button>`;
+  }
+
+  function buildMealForm(prefix, data, onSave){
+    data = data || {};
+    const d = data.demografi || {};
+    const logos = data.logos || {};
+    const onSaveAttr = onSave === 'update' ? `updateExistingProject('${prefix}')` : `saveNewProject('${prefix}')`;
+    const onResetAttr = onSave === 'update' ? `cancelUpdatePage()` : `resetInputForm('${prefix}')`;
+    const saveLabel = onSave === 'update' ? 'Save update' : 'Save';
+    const resetLabel = onSave === 'update' ? 'Batal' : 'Reset';
+
+    return `
+      <form id="${prefix}_form" onsubmit="return false;">
+
+        <div class="form-section">
+          <div class="section-title">Data umum, periode pembukuan &amp; parameter utama</div>
+          <div class="grid-3">
+            <div class="form-group"><label>Nama proyek</label><input type="text" id="${prefix}_project_name" placeholder="Nama project" value="${data.nama||''}"></div>
+            <div class="form-group"><label>Donatur / lembaga donor</label><input type="text" id="${prefix}_donor" placeholder="Nama donatur" value="${data.donatur||''}"></div>
+            <div class="form-group"><label>Nilai proyek (Pagu Rp)</label><input type="text" id="${prefix}_project_value" placeholder="Rp 0" value="${data.projectValueText||''}"></div>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Jenis project</label><input type="text" id="${prefix}_project_type" placeholder="Contoh: Pendidikan, Kesehatan" value="${data.jenis||''}"></div>
+            <div class="form-group"><label>Wilayah / lokasi sasaran</label><input type="text" id="${prefix}_location" placeholder="Kota / provinsi" value="${data.lokasi||''}"></div>
+            <div class="form-group"><label>Project manager (PM)</label><input type="text" id="${prefix}_pm" placeholder="Nama PIC" value="${data.pm||''}"></div>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Tanggal mulai implementasi</label><input type="date" id="${prefix}_start_date" value="${data.startDate||''}"></div>
+            <div class="form-group"><label>Tanggal akhir implementasi</label><input type="date" id="${prefix}_end_date" value="${data.endDate||''}"></div>
+            <div class="form-group"><label>Bulan/tahun periode laporan</label><input type="month" id="${prefix}_report_period" value="${data.reportPeriod||''}"></div>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Nilai isian capaian project (%)</label><input type="number" id="${prefix}_project_score" min="0" max="100" placeholder="0" value="${data.progress||0}"></div>
+            <div class="form-group"><label>Nama monev</label>
+              <input type="text" id="${prefix}_monev_category" placeholder="Nama tim / kegiatan monev" value="${esc(data.monevCategory)}">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>1. Status progres aktual pelaksanaan kegiatan</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableActivity'), 'activity', 'Aktivitas')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableActivity')}','activity')">+ Tambah</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableActivity')}">
+            <thead><tr><th>Nama komponen kegiatan</th><th style="width:15%;">Progress %</th><th style="width:25%;">Status kerja</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'activity',data.activities)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>2. Indikator utama kinerja kerja (KPI Logframe)</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableKpi'), 'kpi', 'KPI')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableKpi')}','kpi')">+ Tambah KPI</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableKpi')}">
+            <thead><tr><th>Metrik indikator capaian logframe</th><th style="width:20%;">Target</th><th style="width:20%;">Realisasi</th><th style="width:20%;">Satuan</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'kpi',data.kpis)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">3. Matriks data kuantitatif demografi penerima manfaat</div>
+          <div class="grid-2" style="margin-bottom: 15px;">
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan jenis kelamin</label>
+              <table class="input-table">
+                <tbody>
+                  <tr><td>Laki-laki</td><td><input type="number" id="${prefix}_gen_male" value="${d.male||0}"></td></tr>
+                  <tr><td>Perempuan</td><td><input type="number" id="${prefix}_gen_female" value="${d.female||0}"></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan status disabilitas</label>
+              <table class="input-table">
+                <tbody>
+                  <tr><td>Penyandang disabilitas</td><td><input type="number" id="${prefix}_dis_yes" value="${d.disYes||0}"></td></tr>
+                  <tr><td>Non-disabilitas</td><td><input type="number" id="${prefix}_dis_no" value="${d.disNo||0}"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan jenjang pendidikan</label>
+              <table class="input-table">
+                <tbody>
+                  <tr><td>Siswa SD</td><td><input type="number" id="${prefix}_edu_sd" value="${d.sd||0}"></td></tr>
+                  <tr><td>Siswa SMP</td><td><input type="number" id="${prefix}_edu_smp" value="${d.smp||0}"></td></tr>
+                  <tr><td>Siswa SMA</td><td><input type="number" id="${prefix}_edu_sma" value="${d.sma||0}"></td></tr>
+                  <tr><td>Perguruan tinggi</td><td><input type="number" id="${prefix}_edu_pt" value="${d.pt||0}"></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan kelompok usia</label>
+              <table class="input-table">
+                <tbody>
+                  <tr><td>Usia 15-24 tahun</td><td><input type="number" id="${prefix}_age_15" value="${d.age15||0}"></td></tr>
+                  <tr><td>Usia 25-34 tahun</td><td><input type="number" id="${prefix}_age_25" value="${d.age25||0}"></td></tr>
+                  <tr><td>Usia 35-44 tahun</td><td><input type="number" id="${prefix}_age_35" value="${d.age35||0}"></td></tr>
+                  <tr><td>Usia 45-54 tahun</td><td><input type="number" id="${prefix}_age_45" value="${d.age45||0}"></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>4. Detail progres capaian rencana kurva S berdasarkan bulan (%)</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableCurveS'), 'curve', 'KurvaS')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableCurveS')}','curve')">+ Tambah bulan</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableCurveS')}">
+            <thead><tr><th>Bulan implementasi</th><th style="width:25%;">Target rencana akumulatif (%)</th><th style="width:25%;">Realisasi aktual akumulatif (%)</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'curve',data.curveS)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>5. Rencana jadwal agenda kegiatan terdekat (milestone)</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableSchedule'), 'schedule', 'Jadwal')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableSchedule')}','schedule')">+ Tambah jadwal</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableSchedule')}">
+            <thead><tr><th>Nama kegiatan terdekat</th><th style="width:25%;">Tanggal / waktu</th><th style="width:30%;">Keterangan singkat</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'schedule',data.schedule)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>6. Kendala &amp; tantangan utama lapangan</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableChallenges'), 'challenge', 'Kendala')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableChallenges')}','challenge')">+ Tambah tantangan</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableChallenges')}">
+            <thead><tr><th>Tantangan / risiko</th><th style="width:15%;">Dampak</th><th>Mitigasi</th><th style="width:15%;">Status</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'challenge',data.challenges)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>7. Pembelajaran kontekstual (lesson learned MEAL)</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableLessons'), 'lesson', 'LessonLearned')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableLessons')}','lesson')">+ Tambah pembelajaran</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableLessons')}">
+            <thead><tr><th>Pembelajaran utama</th><th>Rekomendasi</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'lesson',data.lessons)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">
+            <span>8. Stakeholder &amp; mitra kerja lapangan</span>
+            <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableStakeholder'), 'stakeholder', 'Stakeholder')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableStakeholder')}','stakeholder')">+ Tambah mitra</button></span>
+          </div>
+          <table class="input-table" id="${tableId(prefix,'tableStakeholder')}">
+            <thead><tr><th>Nama instansi / dinas</th><th>Peran makro</th><th>Kontribusi konkret lapangan</th><th style="width:10%;">Aksi</th></tr></thead>
+            <tbody>${rowsHtml(prefix,'stakeholder',data.stakeholders)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">9. Pengaturan logo institusi &amp; logo mitra (kanan atas laporan)</div>
+          <div class="grid-2">
+            <div class="photo-card">
+              <label style="font-size:11px; font-weight:700; color:#ea580c; display:block; margin-bottom:8px;">Logo lembaga</label>
+              <img id="${prefix}_prev_logo_rz" class="photo-preview" src="${logos.rz||''}" style="${logos.rz?'':'display:none;'} height:70px;">
+              <div id="${prefix}_text_logo_rz" class="photo-preview" style="height:70px; ${logos.rz?'display:none;':''}">Belum ada logo lembaga</div>
+              <input type="file" accept="image/*" onchange="previewImage(this, '${prefix}_prev_logo_rz', '${prefix}_text_logo_rz')">
+            </div>
+            <div class="photo-card">
+              <label style="font-size:11px; font-weight:700; color:#ea580c; display:block; margin-bottom:8px;">Logo mitra</label>
+              <img id="${prefix}_prev_logo_mitra" class="photo-preview" src="${logos.mitra||''}" style="${logos.mitra?'':'display:none;'} height:70px;">
+              <div id="${prefix}_text_logo_mitra" class="photo-preview" style="height:70px; ${logos.mitra?'display:none;':''}">Belum ada logo mitra</div>
+              <input type="file" accept="image/*" onchange="previewImage(this, '${prefix}_prev_logo_mitra', '${prefix}_text_logo_mitra')">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">10. Dokumentasi &amp; foto lapangan (maksimal 3 foto)</div>
+          <div class="grid-3">
+            ${[1,2,3].map(i=>photoCardHtml(prefix, i, (data.photos&&data.photos[i-1])||null)).join('')}
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="meal-btn meal-btn-secondary" onclick="${onResetAttr}">${resetLabel}</button>
+          <button type="button" class="meal-btn meal-btn-primary" onclick="${onSaveAttr}">${saveLabel}</button>
+        </div>
+      </form>
+    `;
+  }
+
+  /* ============ ACTIONS GENERIK FORM ============ */
+  function previewImage(input, imgId, textId) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const imgEl = document.getElementById(imgId);
+        if(imgEl){ imgEl.src = e.target.result; imgEl.style.display = 'block'; }
+        const txtEl = document.getElementById(textId);
+        if(txtEl) txtEl.style.display = 'none';
+        imageCache[imgId] = e.target.result;
+      }
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function addRow(tableElId, kind) {
+    const tbody = document.getElementById(tableElId).getElementsByTagName('tbody')[0];
+    const prefix = tableElId.split('_')[0];
+    const tr = document.createElement('tr');
+    tr.innerHTML = rowBuilders[kind](prefix, null);
+    tbody.appendChild(tr);
+  }
+  function removeRow(btn) {
+    const tbody = btn.parentNode.parentNode.parentNode;
+    if(tbody.rows.length > 1) tbody.removeChild(btn.parentNode.parentNode);
+  }
+
+  const excelColumnMap = {
+    activity: { 'Nama Komponen Kegiatan':'act_name', 'Progress (%)':'act_prog', 'Status Kerja (Selesai/On Track)':'act_status' },
+    kpi: { 'Metrik Indikator Capaian Logframe':'kpi_name', 'Target':'kpi_target', 'Realisasi':'kpi_real', 'Satuan':'kpi_unit' },
+    curve: { 'Bulan (Jan/Feb/Mar/Apr/Mei/Jun/Jul/Agu/Sep/Okt/Nov/Des)':'curve_month', 'Target Rencana Akumulatif (%)':'curve_p', 'Realisasi Aktual Akumulatif (%)':'curve_a' },
+    schedule: { 'Nama Kegiatan Terdekat':'sch_name', 'Tanggal / Waktu':'sch_date', 'Keterangan Singkat':'sch_desc' },
+    challenge: { 'Tantangan / Risiko':'ch_risk', 'Dampak (Sedang/Tinggi/Besar)':'ch_impact', 'Mitigasi':'ch_mitigation', 'Status (Open/Closed)':'ch_status' },
+    lesson: { 'Pembelajaran Utama':'ls_main', 'Rekomendasi':'ls_rec' },
+    stakeholder: { 'Nama Instansi / Dinas':'sh_name', 'Peran Makro':'sh_role', 'Kontribusi Konkret Lapangan':'sh_act' }
+  };
+
+  function handleExcelUpload(input, tableElId, kind, sheetName){
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        const sheet = wb.Sheets[sheetName] || wb.Sheets[wb.SheetNames.find(n=>n.toLowerCase()===sheetName.toLowerCase())] || wb.Sheets[wb.SheetNames[0]];
+        if(!sheet){ alert('Sheet "'+sheetName+'" tidak ditemukan di file Excel.'); return; }
+        const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+        if(rows.length===0){ alert('Tidak ada data pada sheet "'+sheetName+'".'); return; }
+        const colMap = excelColumnMap[kind];
+        const prefix = tableElId.split('_')[0];
+        const tbody = document.getElementById(tableElId).getElementsByTagName('tbody')[0];
+        rows.forEach(row=>{
+          const item = {};
+          Object.keys(colMap).forEach(excelCol=>{
+            const fieldKey = colMap[excelCol];
+            let val = row[excelCol];
+            if(val===undefined){
+              const foundKey = Object.keys(row).find(k=>k.trim().toLowerCase()===excelCol.trim().toLowerCase());
+              val = foundKey ? row[foundKey] : '';
+            }
+            item[fieldKey] = (val===undefined||val===null) ? '' : String(val).trim();
+          });
+          const tr = document.createElement('tr');
+          tr.innerHTML = rowBuilders[kind](prefix, item);
+          tbody.appendChild(tr);
+        });
+        const firstRow = tbody.rows[0];
+        const isEmptyFirst = Array.from(firstRow.querySelectorAll('input,select')).every(el=>!el.value);
+        if(isEmptyFirst && tbody.rows.length > rows.length) tbody.removeChild(firstRow);
+        alert(rows.length+' baris berhasil diimpor dari Excel ke bagian ini.');
+      }catch(err){
+        alert('Gagal membaca file Excel: '+err.message);
+      }
+      input.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function readTable(tableElId, cols){
+    const rows = document.getElementById(tableElId).querySelectorAll('tbody tr');
+    const out = [];
+    rows.forEach(row=>{
+      const obj = {};
+      cols.forEach(c=>{
+        const el = row.querySelector(`[name="${c}"]`);
+        obj[c] = el ? el.value : '';
+      });
+      out.push(obj);
+    });
+    return out;
+  }
+
+  function getVal(prefix, suffix){
+    const el = document.getElementById(prefix + '_' + suffix);
+    return el ? el.value : '';
+  }
+
+  function collectFormData(prefix){
+    return {
+      nama: getVal(prefix,'project_name').trim(),
+      donatur: getVal(prefix,'donor').trim(),
+      jenis: getVal(prefix,'project_type').trim(),
+      lokasi: getVal(prefix,'location').trim(),
+      pm: getVal(prefix,'pm').trim(),
+      target: (getVal(prefix,'project_value').match(/\d+/g) || []).join('') || '0',
+      projectValueText: getVal(prefix,'project_value').trim(),
+      startDate: getVal(prefix,'start_date'),
+      endDate: getVal(prefix,'end_date'),
+      reportPeriod: getVal(prefix,'report_period'),
+      progress: Math.min(100, Math.max(0, Number(getVal(prefix,'project_score'))||0)),
+      monevCategory: getVal(prefix,'monev_category') || 'Non-Monev',
+
+      activities: readTable(tableId(prefix,'tableActivity'), ['act_name','act_prog','act_status']),
+      kpis: readTable(tableId(prefix,'tableKpi'), ['kpi_name','kpi_target','kpi_real','kpi_unit']),
+      curveS: readTable(tableId(prefix,'tableCurveS'), ['curve_month','curve_p','curve_a']),
+      schedule: readTable(tableId(prefix,'tableSchedule'), ['sch_name','sch_date','sch_desc']),
+      challenges: readTable(tableId(prefix,'tableChallenges'), ['ch_risk','ch_impact','ch_mitigation','ch_status']),
+      lessons: readTable(tableId(prefix,'tableLessons'), ['ls_main','ls_rec']),
+      stakeholders: readTable(tableId(prefix,'tableStakeholder'), ['sh_name','sh_role','sh_act']),
+
+      demografi: {
+        male: Number(getVal(prefix,'gen_male'))||0,
+        female: Number(getVal(prefix,'gen_female'))||0,
+        disYes: Number(getVal(prefix,'dis_yes'))||0,
+        disNo: Number(getVal(prefix,'dis_no'))||0,
+        sd: Number(getVal(prefix,'edu_sd'))||0,
+        smp: Number(getVal(prefix,'edu_smp'))||0,
+        sma: Number(getVal(prefix,'edu_sma'))||0,
+        pt: Number(getVal(prefix,'edu_pt'))||0,
+        age15: Number(getVal(prefix,'age_15'))||0,
+        age25: Number(getVal(prefix,'age_25'))||0,
+        age35: Number(getVal(prefix,'age_35'))||0,
+        age45: Number(getVal(prefix,'age_45'))||0
+      },
+
+      logos: {
+        rz: imageCache[prefix+'_prev_logo_rz'] || null,
+        mitra: imageCache[prefix+'_prev_logo_mitra'] || null
+      },
+      photos: [1,2,3].map(i=>({
+        data: imageCache[prefix+'_prev_img_'+i] || null,
+        label: getVal(prefix,'lbl_img_'+i).trim()
+      }))
+    };
+  }
+
+  /* ============ HALAMAN INPUT PROJECT BARU ============ */
+  function renderInputForm(){
+    document.getElementById('inputFormMount').innerHTML = buildMealForm('in', {}, 'new');
+  }
+
+  function resetInputForm(prefix){
+    renderInputForm();
+  }
+
+  function saveNewProject(prefix){
+    const formData = collectFormData(prefix);
+    if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
+
+    const newProject = Object.assign(formData, {
+      id: uid(),
+      finished: false,
+      finishedAt: null,
+      history: [],
+      lastUpdatedAt: new Date().toISOString()
+    });
+
+    projects.push(newProject);
+    save();
+    renderInputForm();
+    showPage('running');
+  }
+
+  /* ============ HALAMAN UPDATE PROJECT (form lengkap) ============ */
+  function openUpdatePage(id){
+    if(!isAdmin){ openLoginModal(); return; }
+    activeProjectId = id;
+    const p = projects.find(x=>x.id===id);
+    if(!p) return;
+    document.getElementById('updatePageTitle').innerText = 'Update project: ' + (p.nama||'-');
+    document.getElementById('updateFormMount').innerHTML = buildMealForm('upd', p, 'update');
+    document.getElementById('navUpdate').style.display = 'inline-block';
+    showPage('update');
+  }
+
+  function cancelUpdatePage(){
+    document.getElementById('navUpdate').style.display = 'none';
+    showPage(activeProjectId && projects.find(p=>p.id===activeProjectId && p.finished) ? 'finish' : 'running');
+  }
+
+  function updateExistingProject(prefix){
+    const p = projects.find(x=>x.id===activeProjectId);
+    if(!p) return;
+    const formData = collectFormData(prefix);
+    if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
+
+    const bulanIni = (formData.reportPeriod) || new Date().toISOString().slice(0,7);
+    p.history = p.history || [];
+    const idx = p.history.findIndex(h=>h.bulan===bulanIni);
+    const entry = { bulan: bulanIni, progress: formData.progress, catatan: 'Update data project melalui formulir lengkap.' };
+    if(idx>=0) p.history[idx] = entry; else p.history.push(entry);
+    p.history.sort((a,b)=>a.bulan.localeCompare(b.bulan));
+
+    Object.assign(p, formData, { history: p.history, lastUpdatedAt: new Date().toISOString() });
+
+    save();
+    document.getElementById('navUpdate').style.display = 'none';
+    showPage(p.finished ? 'finish' : 'running');
+  }
+
+  /* ============ HALAMAN LAPORAN (output MEAL) ============ */
+  function goBackFromReport(){
+    document.getElementById('navReport').style.display = 'none';
+    showPage(reportProjectId && projects.find(p=>p.id===reportProjectId && p.finished) ? 'finish' : 'running');
+  }
+
+  function createPieChartSvg(title, total, segments) {
+    if(!total || total <= 0){
+      return `
+        <div class="pie-container">
+          <div class="pie-title">${title}</div>
+          <div class="pie-svg-wrapper" style="display:flex; align-items:center; justify-content:center;">
+            <div class="pie-empty-note">Data masih dalam<br>pengumpulan dan<br>pengolahan</div>
+          </div>
+        </div>
+      `;
+    }
+    let accumulatedPercent = 0; let svgPaths = '';
+    segments.forEach(seg => {
+      const pct = total > 0 ? (seg.val / total) * 100 : 0; if (pct <= 0) return;
+      const startAngle = (accumulatedPercent / 100) * 360; accumulatedPercent += pct;
+      const endAngle = (accumulatedPercent / 100) * 360;
+      const x1 = 50 + 40 * Math.cos((startAngle - 90) * Math.PI / 180);
+      const y1 = 50 + 40 * Math.sin((startAngle - 90) * Math.PI / 180);
+      const x2 = 50 + 40 * Math.cos((endAngle - 90) * Math.PI / 180);
+      const y2 = 50 + 40 * Math.sin((endAngle - 90) * Math.PI / 180);
+      const largeArcFlag = pct > 50 ? 1 : 0;
+      svgPaths += `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z" fill="${seg.color}" stroke="#fff" stroke-width="1.5"></path>`;
+    });
+    svgPaths += `<circle cx="50" cy="50" r="24" fill="#ffffff"></circle>`;
+
+    let legendHtml = '';
+    segments.forEach(seg => {
+      const p = total > 0 ? ((seg.val / total) * 100).toFixed(1) : 0;
+      legendHtml += `<div class="legend-item"><span><span class="legend-dot" style="background:${seg.color}"></span>${seg.label}</span><strong>${seg.val} (${p}%)</strong></div>`;
+    });
+
+    return `
+      <div class="pie-container">
+        <div class="pie-title">${title}</div>
+        <div class="pie-svg-wrapper">
+          <svg viewBox="0 0 100 100" width="90" height="90">${svgPaths}</svg>
+          <div class="pie-center-text">TTL<br>${total}</div>
+        </div>
+        <div class="pie-legends">${legendHtml}</div>
+      </div>
+    `;
+  }
+
+  function bulanName(code){
+    const map = {Jan:'Januari',Feb:'Februari',Mar:'Maret',Apr:'April',Mei:'Mei',Jun:'Juni',Jul:'Juli',Agu:'Agustus',Sep:'September',Okt:'Oktober',Nov:'November',Des:'Desember'};
+    return map[code] || code;
+  }
+
+  function openReport(id){
+    const p = projects.find(x=>x.id===id);
+    if(!p) return;
+    reportProjectId = id;
+    document.getElementById('navReport').style.display = 'inline-block';
+    showPage('report');
+    renderReport(p);
+  }
+
+  function renderReport(p){
+    document.getElementById('view_project_title').innerText = p.nama || '-';
+    document.getElementById('view_box_project_name').innerText = p.nama || '-';
+    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PROGRAM: ${p.progress||0}%`;
+
+    const rzContainer = document.getElementById('container_logo_rz_out');
+    rzContainer.innerHTML = p.logos && p.logos.rz ? `<img src="${p.logos.rz}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Logo lembaga</span>`;
+    const mtContainer = document.getElementById('container_logo_mitra_out');
+    mtContainer.innerHTML = p.logos && p.logos.mitra ? `<img src="${p.logos.mitra}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Mitra</span>`;
+
+    document.getElementById('view_project_value').innerText = p.projectValueText || fmtRupiah(p.target) || '-';
+    document.getElementById('view_donor').innerText = p.donatur || '-';
+    document.getElementById('view_location').innerText = p.lokasi || '-';
+    document.getElementById('view_pm').innerText = p.pm || '-';
+    document.getElementById('view_project_duration').innerText = (p.startDate ? fmtTanggal(p.startDate) : '-') + ' s/d ' + (p.endDate ? fmtTanggal(p.endDate) : '-');
+    document.getElementById('view_report_period').innerText = p.reportPeriod ? fmtBulan(p.reportPeriod) : '-';
+
+    const lastUpdateDate = p.lastUpdatedAt ? fmtTanggal(p.lastUpdatedAt) : '-';
+    const lokasiText = p.lokasi || '-';
+    document.getElementById('view_footer_locdate').innerText = `${lokasiText}, ${lastUpdateDate}`;
+    document.getElementById('view_footer_pm_name').innerText = p.pm || '-';
+    document.getElementById('view_footer_pm_role').innerText = 'Project Advisor';
+
+    const actBody = document.getElementById('view_table_act').querySelector('tbody');
+    actBody.innerHTML = (p.activities||[]).map(r=>{
+      const cls = r.act_status === 'Selesai' ? 'bg-selesai' : 'bg-ontrack';
+      return `<td><strong>${r.act_name||'-'}</strong></td><td>${r.act_prog||0}%</td><td><span class="badge-status ${cls}">${r.act_status||'-'}</span></td>`;
+    }).map(html=>`<tr>${html}</tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    let sumPct = 0, countKpi = 0;
+    const kpiBody = document.getElementById('view_table_kpi').querySelector('tbody');
+    kpiBody.innerHTML = (p.kpis||[]).map(r=>{
+      const t = parseFloat(r.kpi_target)||1;
+      const real = parseFloat(r.kpi_real)||0;
+      const pct = ((real/t)*100).toFixed(1);
+      sumPct += parseFloat(pct); countKpi++;
+      return `<tr><td>${r.kpi_name||'-'}</td><td>${r.kpi_target||0} ${r.kpi_unit||''}</td><td><strong>${r.kpi_real||0} ${r.kpi_unit||''}</strong></td><td><strong>${pct}%</strong></td></tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+    document.getElementById('view_kpi_summary_percentage').innerText = `RATA-RATA EFEKTIVITAS SASARAN KPI: ${(countKpi>0 ? (sumPct/countKpi) : 0).toFixed(1)}%`;
+
+    const d = p.demografi || {};
+    const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
+    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#fdba74'}]);
+    pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#fdba74'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.sd+d.smp+d.sma+d.pt), [{label:'SD', val:d.sd||0, color:'#9a3412'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#fed7aa'}]);
+    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age15+d.age25+d.age35+d.age45), [{label:'15-24', val:d.age15||0, color:'#9a3412'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#fed7aa'}]);
+
+    const curveRows = p.curveS || [];
+    const summaryBody = document.getElementById('view_table_curves_summary').querySelector('tbody');
+    summaryBody.innerHTML = '';
+    let svgPointsPlan = '', svgPointsAct = '', svgElementsGroup = '';
+    let xInterval = 400 / (curveRows.length > 1 ? curveRows.length - 1 : 1);
+    let absoluteGap = 0, lastMonthWithGap = '';
+
+    svgElementsGroup += `
+      <line x1="40" y1="30" x2="450" y2="30" stroke="#fee2e2" stroke-dasharray="2"></line>
+      <line x1="40" y1="80" x2="450" y2="80" stroke="#fed7aa" stroke-dasharray="2"></line>
+      <line x1="40" y1="130" x2="450" y2="130" stroke="#f97316" stroke-width="1.2"></line>
+    `;
+
+    curveRows.forEach((row, idx)=>{
+      const mName = bulanName(row.curve_month);
+      const pVal = parseFloat(row.curve_p)||0;
+      const aVal = parseFloat(row.curve_a)||0;
+      summaryBody.innerHTML += `<tr><td><strong>${mName}</strong></td><td>${pVal.toFixed(1)}%</td><td><strong>${aVal.toFixed(1)}%</strong></td></tr>`;
+      let x = 40 + (idx * xInterval);
+      let yPlan = 130 - (pVal * 1.0);
+      let yAct = 130 - (aVal * 1.0);
+      svgPointsPlan += `${x},${yPlan} `;
+      svgPointsAct += `${x},${yAct} `;
+      svgElementsGroup += `<text x="${x}" y="152" fill="#475569" font-size="10" font-weight="600" text-anchor="middle">${mName}</text>`;
+      svgElementsGroup += `<circle cx="${x}" cy="${yPlan}" r="4" fill="#ea580c"></circle><text x="${x}" y="${yPlan-8}" fill="#c2410c" font-size="9" font-weight="bold" text-anchor="middle">${pVal.toFixed(1)}%</text>`;
+      svgElementsGroup += `<circle cx="${x}" cy="${yAct}" r="4" fill="#f97316"></circle><text x="${x}" y="${yAct+12}" fill="#b45309" font-size="9" font-weight="bold" text-anchor="middle">${aVal.toFixed(1)}%</text>`;
+      if(pVal > aVal){ absoluteGap = pVal - aVal; lastMonthWithGap = mName; }
+    });
+
+    document.getElementById('svg_curve_s').innerHTML = svgElementsGroup + `
+      <polyline points="${svgPointsPlan}" fill="none" stroke="#ea580c" stroke-width="3.5"></polyline>
+      <polyline points="${svgPointsAct}" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="4 3"></polyline>
+    `;
+
+    const footnoteEl = document.getElementById('view_curve_footnote');
+    if(absoluteGap > 0){
+      footnoteEl.style.display = 'block';
+      footnoteEl.innerHTML = `* <strong>Footnote analisis deviasi target vs aktual:</strong> teridentifikasi akumulasi deviasi negatif (gap) sebesar <strong>-${absoluteGap.toFixed(1)}%</strong> hingga periode bulan <strong>${lastMonthWithGap}</strong>. Rekomendasi tindakan korektif: diperlukan percepatan mobilisasi logistik cadangan serta restrukturisasi alokasi tim guna mengejar deviasi target pada periode berikutnya.`;
+    } else {
+      footnoteEl.style.display = 'none';
+    }
+
+    const schBody = document.getElementById('view_table_sch').querySelector('tbody');
+    schBody.innerHTML = (p.schedule||[]).map(r=>`<tr><td><strong>${r.sch_name||'-'}</strong></td><td>${r.sch_date||'-'}</td><td>${r.sch_desc||'-'}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const chBody = document.getElementById('view_table_challenges').querySelector('tbody');
+    chBody.innerHTML = (p.challenges||[]).map(r=>{
+      let impBadge = 'badge-info'; if(r.ch_impact === 'Tinggi') impBadge='badge-warning'; if(r.ch_impact === 'Besar') impBadge='badge-danger';
+      const statClass = r.ch_status === 'Closed' ? 'bg-closed' : 'bg-open';
+      return `<tr><td><strong>${r.ch_risk||'-'}</strong></td><td><span class="${impBadge}">${r.ch_impact||'-'}</span></td><td>${r.ch_mitigation||'-'}</td><td><span class="badge-status ${statClass}">${r.ch_status||'-'}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const lsBody = document.getElementById('view_table_lessons').querySelector('tbody');
+    lsBody.innerHTML = (p.lessons||[]).map(r=>`<tr><td><strong>${r.ls_main||'-'}</strong></td><td>${r.ls_rec||'-'}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const shBody = document.getElementById('view_table_sh').querySelector('tbody');
+    shBody.innerHTML = (p.stakeholders||[]).map(r=>`<tr><td><strong>${r.sh_name||'-'}</strong></td><td>${r.sh_role||'-'}</td><td>${r.sh_act||'-'}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const photoGridOut = document.getElementById('view_photo_grid'); photoGridOut.innerHTML = '';
+    (p.photos||[]).forEach((ph, i)=>{
+      if(ph.data) photoGridOut.innerHTML += `<div class="photo-out-item"><img src="${ph.data}" class="photo-out-img"><span class="photo-out-lbl">${ph.label || ('Foto '+(i+1))}</span></div>`;
+    });
+    if(photoGridOut.innerHTML === '') photoGridOut.innerHTML = '<div style="grid-column:span 3; text-align:center; padding:15px; font-size:11px; color:#a8a29e;">Tidak ada dokumentasi foto kerja lapangan yang diunggah.</div>';
+  }
+
+  /* ============ INIT ============ */
+  applyAuthUI();
+  renderHome();
+  renderRunning();
+  renderFinish();
+  renderInputForm();
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Manajemen Project Donatur</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  :root{
+    --bg:#fef9f3; --card:#ffffff; --border:#f0e6da; --text:#2d2a26; --text-muted:#8a8378;
+    --purple:#7c5cff; --purple-light:#efeaff;
+    --teal:#0fb88a; --teal-light:#e3faf1;
+    --coral:#ff7a5c; --coral-light:#ffeae5;
+    --amber:#ffb02e; --amber-light:#fff5e0;
+    --pink:#ff5c8a; --pink-light:#ffe9f0;
+    --blue:#3a8dff; --blue-light:#e8f2ff;
+  }
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:linear-gradient(90deg,var(--purple),var(--pink));padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:10px;}
+  header h1{font-size:18px;margin:0;font-weight:700;color:#fff;}
+  nav{display:flex;gap:8px;background:rgba(255,255,255,.18);padding:4px;border-radius:12px;flex-wrap:wrap;}
+  nav button{background:none;border:none;padding:9px 16px;border-radius:9px;cursor:pointer;font-size:14px;color:#fff;font-weight:600;opacity:.85;}
+  nav button.active{background:#fff;color:var(--purple);opacity:1;}
+  #navLogin, #navLogout{background:rgba(255,255,255,.25); margin-left:4px;}
+  #navLogout{background:#ffe3e3; color:#c0392b !important; opacity:1;}
+  main{max-width:1150px;margin:0 auto;padding:24px;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  .grid-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+  .stat-card{border-radius:16px;padding:18px;color:#fff;position:relative;overflow:hidden;}
+  .stat-card .label{font-size:13px;opacity:.9;margin-bottom:8px;font-weight:600;}
+  .stat-card .value{font-size:28px;font-weight:700;}
+  .stat-card .icon{position:absolute;right:14px;top:14px;font-size:26px;opacity:.5;}
+  .stat-c1{background:linear-gradient(135deg,var(--purple),#a78bff);}
+  .stat-c2{background:linear-gradient(135deg,var(--teal),#4fd9ad);}
+  .stat-c3{background:linear-gradient(135deg,var(--coral),#ff9e85);}
+  .stat-c4{background:linear-gradient(135deg,var(--blue),#6fb1ff);}
+  .stat-c5{background:linear-gradient(135deg,var(--amber),#ffc961);}
+
+  .charts-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:18px;}
+  @media(max-width:800px){.charts-row{grid-template-columns:1fr;}}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 4px 14px rgba(124,92,255,0.06);}
+  .card h2{font-size:16px;margin:0 0 14px;font-weight:700;}
+  .chart-wrap{position:relative;height:220px;}
+
+  table.dashtable{width:100%;border-collapse:collapse;font-size:14px;}
+  table.dashtable th,table.dashtable td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
+  table.dashtable th{color:var(--text-muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+
+  .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+  .badge.green{background:var(--teal-light);color:var(--teal);}
+  .badge.amber{background:var(--amber-light);color:#b97900;}
+  .badge.red{background:var(--coral-light);color:var(--coral);}
+
+  .progress-wrap{display:flex;align-items:center;gap:8px;min-width:140px;}
+  .progress-bar{flex:1;height:9px;background:#f1ece0;border-radius:6px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--pink));border-radius:6px;}
+  .progress-text{font-size:12px;color:var(--text-muted);min-width:34px;text-align:right;font-weight:600;}
+
+  .btn{background:linear-gradient(90deg,var(--purple),var(--pink));color:#fff;border:none;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
+  .btn:hover{opacity:.92;}
+  .btn-outline{background:#fff;color:var(--purple);border:2px solid var(--purple);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;}
+  .btn-outline:hover{background:var(--purple-light);}
+  .btn-small{background:var(--purple-light);border:none;padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;color:var(--purple);font-weight:600;}
+  .btn-small:hover{background:#e2d9ff;}
+  .btn-small.danger{background:var(--coral-light);color:var(--coral);}
+  .btn-small.danger:hover{background:#ffd9cf;}
+  .btn-small.teal{background:var(--teal-light);color:var(--teal);}
+
+  .empty{text-align:center;padding:50px 20px;color:var(--text-muted);}
+  .empty .big-icon{font-size:40px;margin-bottom:10px;}
+
+  .project-title-link{color:var(--purple);cursor:pointer;font-weight:700;}
+  .project-title-link:hover{text-decoration:underline;}
+
+  .row-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filter-bar select{padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;min-width:160px;background:#fffdfb;}
+
+  /* ===== FORM INPUT MEAL (dari file user) ===== */
+  .meal-card-box { background: #ffffff; border-radius: 8px; border: 1px solid #fed7aa; overflow: hidden; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.05); margin-bottom: 25px; font-family: 'Segoe UI', sans-serif; }
+  .meal-header-app { background-color: #ea580c; color: #ffffff; padding: 20px 25px; border-bottom: 4px solid #c2410c; }
+  .meal-header-app h2 { font-size: 18px; font-weight: 600; margin:0; color:#fff; }
+  .meal-header-app p { font-size: 12px; opacity: 0.9; margin-top: 5px; }
+  .form-section { padding: 25px; border-bottom: 2px solid #fed7aa; }
+  .form-section:nth-child(even) { background-color: #fff7ed; }
+  .section-title { font-size: 13px; font-weight: 700; color: #c2410c; text-transform: uppercase; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; border-left: 5px solid #ea580c; padding-left: 8px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+  .grid-period { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .form-group { display: flex; flex-direction: column; margin-bottom: 12px; }
+  .form-group label { font-size: 11px; font-weight: 600; color: #ea580c; margin-bottom: 5px; text-transform: uppercase; }
+  .form-group input, .form-group select, .form-group textarea,
+  .meal-card-box select, .meal-card-box input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; outline: none; background: #fff; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #ea580c; }
+  .input-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; background: #fff; }
+  .input-table th { background-color: #ffedd5; color: #c2410c; font-weight: 700; padding: 10px 8px; border: 1px solid #fed7aa; text-align: left; text-transform: uppercase; font-size: 11px; }
+  .input-table td { padding: 8px; border: 1px solid #fed7aa; vertical-align: middle; }
+  .input-table input, .input-table select, .input-table textarea { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 12px; }
+  .photo-card { border: 1px dashed #ea580c; padding: 12px; background: #fff7ed; border-radius: 6px; text-align: center; }
+  .photo-preview { width: 100%; height: 110px; background: #ffedd5; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #ea580c; object-fit: cover; border: 1px solid #fed7aa; }
+  .meal-btn { padding: 10px 18px; font-size: 13px; font-weight: 600; border-radius: 4px; cursor: pointer; border: none; transition: background 0.2s; display: inline-flex; align-items: center; gap: 5px; }
+  .meal-btn-primary { background-color: #ea580c; color: white; }
+  .meal-btn-primary:hover { background-color: #c2410c; }
+  .meal-btn-secondary { background-color: #ffedd5; color: #c2410c; }
+  .meal-btn-add { background-color: #f97316; color: white; font-size: 11px; padding: 5px 10px; text-transform: none;}
+  .meal-btn-danger { background-color: #ef4444; color: white; padding: 6px 10px; }
+  .meal-btn-pdf { background-color: #4b5563; color: white; }
+  .form-actions { background: #fff7ed; padding: 25px; text-align: right; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #fed7aa; }
+
+  /* ===== OUTPUT DASHBOARD / LAPORAN MEAL ===== */
+  #dashboardOutputView { background: #ffffff; padding: 25px; font-family: 'Segoe UI', sans-serif; }
+  .dash-header-wrapper { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #ea580c; padding-bottom: 12px; margin-bottom: 20px; }
+  .dash-header-left { flex: 1; padding-right: 20px; }
+  .dash-title-main { color: #ea580c; font-size: 20px; font-weight: 700; text-transform: uppercase; line-height: 1.2; }
+  .dash-title-sub { font-size: 11px; color: #7c2d12; margin-top: 4px; font-weight: 600; }
+  .dash-score-bright-box { display: inline-block; background-color: #f97316; color: #ffffff; padding: 6px 14px; font-size: 13px; font-weight: 800; border-radius: 4px; margin-top: 10px; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2); letter-spacing: 0.5px; text-transform: uppercase; }
+  .dash-header-logos { display: flex; gap: 10px; align-items: center; justify-content: flex-end; min-width: 220px; }
+  .dash-logo-container { width: 113px; height: 75px; background-color: #fff; border: 1px solid #fed7aa; border-radius: 4px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; }
+  .dash-logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .dash-logo-placeholder { font-size: 8px; color: #94a3b8; text-align: center; font-weight: 600; text-transform: uppercase; }
+  .dash-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 25px; }
+  .dash-meta-item { background: #fffaf7; border: 1px solid #fed7aa; border-radius: 6px; padding: 12px 15px; box-shadow: 0 2px 4px rgba(234, 88, 12, 0.02); }
+  .dash-meta-item strong { color: #c2410c; display: block; font-size: 10px; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .dash-meta-item span { font-size: 13px; color: #1e293b; font-weight: 500; }
+  .dash-section-container { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+  .dash-card { border: 1px solid #fed7aa; border-radius: 6px; padding: 15px; background-color: #fffaf5; display: flex; flex-direction: column; width: 100%; }
+  .dash-card-title { font-size: 12px; font-weight: 700; color: #c2410c; text-transform: uppercase; margin-bottom: 10px; border-bottom: 2px solid #ea580c; padding-bottom: 4px; }
+  .curve-footnote { font-size: 11px; color: #7f1d1d; background-color: #fef2f2; border: 1px solid #fca5a5; padding: 10px; border-radius: 4px; margin-top: 12px; line-height: 1.4; display: none; }
+  .curve-footnote strong { color: #b91c1c; }
+  .kpi-percent-box { background: #ea580c; color: #ffffff; padding: 8px; border-radius: 4px; font-weight: bold; font-size: 12px; text-transform: uppercase; text-align: center; margin-bottom: 10px; max-width: 350px; }
+  .badge-status { padding: 3px 6px; border-radius: 3px; font-weight: bold; font-size: 10px; color: #fff; display: inline-block; text-align: center; }
+  .bg-selesai, .bg-closed { background-color: #10b981; }
+  .bg-ontrack, .bg-open { background-color: #f59e0b; }
+  .badge-danger { background-color: #ef4444; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-size: 9px; }
+  .badge-warning { background-color: #f97316; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-size: 9px; }
+  .badge-info { background-color: #3b82f6; color: #fff; padding: 2px 5px; border-radius: 3px; font-weight: bold; font-size: 9px; }
+  .pie-charts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .pie-container { display: flex; flex-direction: column; align-items: center; background: #fff; padding: 10px; border: 1px solid #fed7aa; border-radius: 4px; }
+  .pie-title { font-size: 10px; font-weight: 700; color: #c2410c; text-transform: uppercase; margin-bottom: 8px; text-align: center; }
+  .pie-svg-wrapper { position: relative; width: 90px; height: 90px; }
+  .pie-center-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-size: 9px; font-weight: bold; color: #ea580c; pointer-events: none; line-height: 1.1; }
+  .pie-legends { font-size: 9px; margin-top: 8px; width: 100%; display: flex; flex-direction: column; gap: 2px; }
   .legend-item { display: flex; justify-content: space-between; align-items: center; }
   .legend-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
   .dash-card table th { background-color: #ffedd5 !important; color: #c2410c !important; }
