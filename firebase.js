@@ -19,7 +19,8 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const db = getFirestore(app);
+
 window.db = db;
 
 console.log("Firebase berhasil terkoneksi");
