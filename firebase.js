@@ -3,10 +3,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebas
 import {  getFirestore,
     collection,
     addDoc,
-     setDoc,
-  doc,
+    setDoc,
+    doc,
     onSnapshot,
-    getDocs   } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    getDocs,
+    updateDoc,
+    deleteDoc    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -35,5 +37,10 @@ window.setDoc = setDoc;
 window.doc = doc;
 window.getDocs = getDocs;
 window.onSnapshot = onSnapshot;
+window.updateDoc = updateDoc;
+window.deleteDoc = deleteDoc;
 
 console.log("Firebase berhasil terkoneksi");
+if (typeof window.initFirestoreSync === 'function') {
+  window.initFirestoreSync();
+}
