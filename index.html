@@ -1198,15 +1198,15 @@
   }
 
   /* ============ HALAMAN INPUT PROJECT BARU ============ */
-  function renderInputForm(){
+  async function renderInputForm(){
     document.getElementById('inputFormMount').innerHTML = buildMealForm('in', {}, 'new');
   }
 
-  function resetInputForm(prefix){
+  async function resetInputForm(prefix){
     renderInputForm();
   }
 
-  function saveNewProject(prefix){
+ async function saveNewProject(prefix){
     const formData = collectFormData(prefix);
     if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
 
