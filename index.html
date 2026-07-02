@@ -1198,11 +1198,11 @@
   }
 
   /* ============ HALAMAN INPUT PROJECT BARU ============ */
-  async function renderInputForm(){
+ function renderInputForm(){
     document.getElementById('inputFormMount').innerHTML = buildMealForm('in', {}, 'new');
   }
 
-  async function resetInputForm(prefix){
+  function resetInputForm(prefix){
     renderInputForm();
   }
 
