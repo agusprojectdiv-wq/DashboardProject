@@ -173,7 +173,10 @@
     .dash-meta-grid { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; justify-content: space-between !important; gap: 5px !important; margin-bottom: 15px !important; width: 100% !important; page-break-inside: avoid; }
     .dash-meta-item { flex: 1 1 0% !important; min-width: 0 !important; border: 1px solid #cbd5e1 !important; background-color: transparent !important; box-shadow: none !important; padding: 6px 8px !important; page-break-inside: avoid; }
     .dash-meta-item strong { color: #475569 !important; font-size: 8px !important; margin-bottom: 2px !important; }
-    .dash-meta-item span { color: #000000 !important; font-size: 10px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .dash-meta-item span { color: #000000 !important; font-size: 10px !important; white-space: normal !important; overflow: visible !important; text-overflow: unset !important; word-break: break-word !important; overflow-wrap: break-word !important; display: block; }
+    #dashboardOutputView, #dashboardOutputView * { word-break: break-word !important; overflow-wrap: break-word !important; }
+    #dashboardOutputView .input-table td, #dashboardOutputView .input-table th { white-space: normal !important; }
+    .dash-title-main { word-break: break-word !important; overflow-wrap: break-word !important; }
     .dash-card { page-break-inside: avoid; background-color: #fffaf5 !important; margin-bottom: 15px; }
     .pie-container { background: #fffaf5 !important; }
     .dash-logo-container { border: 1px solid #cbd5e1 !important; }
@@ -308,7 +311,7 @@
         <div class="dash-header-left">
           <div class="dash-title-main" id="view_project_title">NAMA PROYEK</div>
           <div class="dash-title-sub">Laporan akumulasi MEAL &amp; pemantauan program terpadu</div>
-          <div class="dash-score-bright-box" id="view_project_score">TOTAL CAPAIAN PROGRAM: -</div>
+          <div class="dash-score-bright-box" id="view_project_score">TOTAL CAPAIAN PEKERJAAN PROJECT: -</div>
         </div>
         <div class="dash-header-logos">
           <div class="dash-logo-container" id="container_logo_rz_out"><span class="dash-logo-placeholder">Logo lembaga</span></div>
@@ -558,6 +561,13 @@
   function uid(){ return 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
   function esc(v){ return (v===undefined||v===null) ? '' : String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
+  // Format nominal ke gaya Indonesia: "Rp 1.250.000" — dipakai baik saat
+  // mengetik di form isian (live) maupun untuk menampilkan nilai tersimpan.
+  function formatRupiahInputValue(raw){
+    const digits = (String(raw||'').match(/\d+/g) || []).join('');
+    if(!digits) return '';
+    return 'Rp ' + parseInt(digits, 10).toLocaleString('id-ID');
+  }
   function fmtBulan(ym){
     if(!ym) return '-';
     const [y,m] = ym.split('-');
@@ -620,12 +630,17 @@
   }
 
   // Nilai isian capaian project (%): dikunci, diambil dari kolom
-  // "Realisasi Aktual Akumulatif (%)" pada baris Kurva S paling terakhir/terbaru diinput.
+  // "Realisasi Aktual Akumulatif (%)" pada baris Kurva S paling terakhir yang SUDAH DIISI.
+  // Baris dengan realisasi masih kosong (walau target sudah diisi) dilewati.
   function computeCapaianProject(p){
     const curve = p.curveS || [];
-    if(!curve.length) return 0;
-    const last = curve[curve.length - 1];
-    return parseFloat(last.curve_a) || 0;
+    for(let i = curve.length - 1; i >= 0; i--){
+      const v = curve[i].curve_a;
+      if(v !== undefined && v !== null && String(v).trim() !== ''){
+        return parseFloat(v) || 0;
+      }
+    }
+    return 0;
   }
 
   // Capaian KPI (%): dikunci, diambil dari rata-rata perbandingan
@@ -902,6 +917,19 @@
     }
   });
 
+  // Delegated listener: field "Nilai proyek (Pagu Rp)" otomatis diformat
+  // pakai separator ribuan titik ala Indonesia ("Rp 1.250.000") sambil mengetik.
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id && e.target.id.endsWith('_project_value')){
+      const el = e.target;
+      const cursorFromEnd = el.value.length - el.selectionStart;
+      const formatted = formatRupiahInputValue(el.value);
+      el.value = formatted;
+      const newPos = Math.max(0, formatted.length - cursorFromEnd);
+      el.setSelectionRange(newPos, newPos);
+    }
+  });
+
 
   function activityRowHtml(prefix, v){
     v = v || {};
@@ -983,7 +1011,7 @@
           <div class="grid-3">
             <div class="form-group"><label>Nama proyek</label><input type="text" id="${prefix}_project_name" placeholder="Nama project" value="${data.nama||''}"></div>
             <div class="form-group"><label>Donatur / lembaga donor</label><input type="text" id="${prefix}_donor" placeholder="Nama donatur" value="${data.donatur||''}"></div>
-            <div class="form-group"><label>Nilai proyek (Pagu Rp)</label><input type="text" id="${prefix}_project_value" placeholder="Rp 0" value="${data.projectValueText||''}"></div>
+            <div class="form-group"><label>Nilai proyek (Pagu Rp)</label><input type="text" id="${prefix}_project_value" placeholder="Rp 0" value="${formatRupiahInputValue(data.projectValueText)}"></div>
           </div>
           <div class="grid-3">
             <div class="form-group"><label>Jenis project</label><input type="text" id="${prefix}_project_type" placeholder="Contoh: Pendidikan, Kesehatan" value="${data.jenis||''}"></div>
@@ -1465,7 +1493,7 @@
   function renderReport(p){
     document.getElementById('view_project_title').innerText = p.nama || '-';
     document.getElementById('view_box_project_name').innerText = p.nama || '-';
-    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PROGRAM: ${p.progress||0}%`;
+    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PEKERJAAN PROJECT: ${p.progress||0}%`;
 
     const rzContainer = document.getElementById('container_logo_rz_out');
     rzContainer.innerHTML = p.logos && p.logos.rz ? `<img src="${p.logos.rz}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Logo lembaga</span>`;
@@ -1526,22 +1554,29 @@
     curveRows.forEach((row, idx)=>{
       const mName = bulanName(row.curve_month);
       const pVal = parseFloat(row.curve_p)||0;
-      const aVal = parseFloat(row.curve_a)||0;
-      summaryBody.innerHTML += `<tr><td><strong>${mName}</strong></td><td>${pVal.toFixed(1)}%</td><td><strong>${aVal.toFixed(1)}%</strong></td></tr>`;
+      // Realisasi dianggap "terisi" hanya jika benar-benar ada isian (bukan kosong),
+      // supaya bulan yang belum diisi realisasinya tidak dianggap 0.
+      const hasAct = row.curve_a !== undefined && row.curve_a !== null && String(row.curve_a).trim() !== '';
+      const aVal = hasAct ? (parseFloat(row.curve_a)||0) : null;
+      summaryBody.innerHTML += `<tr><td><strong>${mName}</strong></td><td>${pVal.toFixed(1)}%</td><td><strong>${hasAct ? aVal.toFixed(1)+'%' : '-'}</strong></td></tr>`;
       let x = 40 + (idx * xInterval);
       let yPlan = 130 - (pVal * 1.0);
-      let yAct = 130 - (aVal * 1.0);
       svgPointsPlan += `${x},${yPlan} `;
-      svgPointsAct += `${x},${yAct} `;
       svgElementsGroup += `<text x="${x}" y="152" fill="#475569" font-size="10" font-weight="600" text-anchor="middle">${mName}</text>`;
       svgElementsGroup += `<circle cx="${x}" cy="${yPlan}" r="4" fill="#ea580c"></circle><text x="${x}" y="${yPlan-8}" fill="#c2410c" font-size="9" font-weight="bold" text-anchor="middle">${pVal.toFixed(1)}%</text>`;
-      svgElementsGroup += `<circle cx="${x}" cy="${yAct}" r="4" fill="#f97316"></circle><text x="${x}" y="${yAct+12}" fill="#b45309" font-size="9" font-weight="bold" text-anchor="middle">${aVal.toFixed(1)}%</text>`;
-      if(pVal > aVal){ absoluteGap = pVal - aVal; lastMonthWithGap = mName; }
+      // Titik & garis realisasi hanya digambar sampai bulan terakhir yang diisi.
+      // Bulan yang realisasinya masih kosong tidak ditarik ke 0 dan tidak memperpanjang garis.
+      if(hasAct){
+        let yAct = 130 - (aVal * 1.0);
+        svgPointsAct += `${x},${yAct} `;
+        svgElementsGroup += `<circle cx="${x}" cy="${yAct}" r="4" fill="#2563eb"></circle><text x="${x}" y="${yAct+12}" fill="#1d4ed8" font-size="9" font-weight="bold" text-anchor="middle">${aVal.toFixed(1)}%</text>`;
+        if(pVal > aVal){ absoluteGap = pVal - aVal; lastMonthWithGap = mName; }
+      }
     });
 
     document.getElementById('svg_curve_s').innerHTML = svgElementsGroup + `
       <polyline points="${svgPointsPlan}" fill="none" stroke="#ea580c" stroke-width="3.5"></polyline>
-      <polyline points="${svgPointsAct}" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="4 3"></polyline>
+      <polyline points="${svgPointsAct}" fill="none" stroke="#2563eb" stroke-width="3"></polyline>
     `;
 
     const footnoteEl = document.getElementById('view_curve_footnote');
