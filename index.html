@@ -323,7 +323,8 @@
         <div class="dash-meta-item"><strong>Masa kerja</strong><span id="view_project_duration" style="font-weight:600;">-</span></div>
         <div class="dash-meta-item"><strong>Periode lap.</strong><span id="view_report_period" style="font-weight:700; color:#ea580c;">-</span></div>
         <div class="dash-meta-item"><strong>Wilayah</strong><span id="view_location">-</span></div>
-        <div class="dash-meta-item"><strong>PM PIC</strong><span id="view_pm">-</span></div>
+        <div class="dash-meta-item"><strong>Project Advisor</strong><span id="view_pm">-</span></div>
+        <div class="dash-meta-item"><strong>Capaian KPI</strong><span id="view_capaian_kpi">-</span></div>
       </div>
 
       <div class="dash-section-container">
@@ -618,6 +619,30 @@
     return (Number(d.male)||0) + (Number(d.female)||0);
   }
 
+  // Nilai isian capaian project (%): dikunci, diambil dari kolom
+  // "Realisasi Aktual Akumulatif (%)" pada baris Kurva S paling terakhir/terbaru diinput.
+  function computeCapaianProject(p){
+    const curve = p.curveS || [];
+    if(!curve.length) return 0;
+    const last = curve[curve.length - 1];
+    return parseFloat(last.curve_a) || 0;
+  }
+
+  // Capaian KPI (%): dikunci, diambil dari rata-rata perbandingan
+  // Realisasi vs Target pada semua baris KPI Logframe.
+  function computeCapaianKpi(p){
+    const kpis = p.kpis || [];
+    if(!kpis.length) return 0;
+    let sumPct = 0, countKpi = 0;
+    kpis.forEach(r=>{
+      const t = parseFloat(r.kpi_target) || 1;
+      const real = parseFloat(r.kpi_real) || 0;
+      sumPct += (real / t) * 100;
+      countKpi++;
+    });
+    return countKpi > 0 ? (sumPct / countKpi) : 0;
+  }
+
   function renderStats(){
     const total = projects.length;
     const selesai = projects.filter(p=>p.finished).length;
@@ -692,7 +717,7 @@
     }
     wrap.innerHTML = `
       <table class="dashtable">
-        <thead><tr><th>Nama project</th><th>Donatur</th><th>Jenis</th><th>Lokasi</th><th>Penerima manfaat</th><th>Progress</th><th>Status</th></tr></thead>
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Jenis</th><th>Lokasi</th><th>Penerima manfaat</th><th>Progress</th><th>Capaian KPI</th><th>Status</th></tr></thead>
         <tbody>
           ${list.map(p=>`
             <tr>
@@ -707,6 +732,7 @@
                   <span class="progress-text">${p.progress||0}%</span>
                 </div>
               </td>
+              <td>${computeCapaianKpi(p).toFixed(1)}%</td>
               <td>${statusBadge(p.progress||0)}</td>
             </tr>
           `).join('')}
@@ -847,6 +873,36 @@
   /* ============ TEMPLATE FORM MEAL (reusable, berbasis prefix) ============ */
   function tableId(prefix, base){ return prefix + '_' + base; }
 
+  // Menghitung ulang nilai field terkunci "Nilai isian capaian project (%)"
+  // dan "Capaian KPI (%)" langsung dari isi tabel Kurva S dan KPI saat ini di form.
+  function recalcLockedScores(prefix){
+    const curveTableId = tableId(prefix, 'tableCurveS');
+    const kpiTableId = tableId(prefix, 'tableKpi');
+    const curveTableEl = document.getElementById(curveTableId);
+    const kpiTableEl = document.getElementById(kpiTableId);
+    const curveS = curveTableEl ? readTable(curveTableId, ['curve_month','curve_p','curve_a']) : [];
+    const kpis = kpiTableEl ? readTable(kpiTableId, ['kpi_name','kpi_target','kpi_real','kpi_unit']) : [];
+
+    const scoreEl = document.getElementById(prefix + '_project_score');
+    const kpiScoreEl = document.getElementById(prefix + '_kpi_score');
+    if(scoreEl) scoreEl.value = computeCapaianProject({curveS}).toFixed(1);
+    if(kpiScoreEl) kpiScoreEl.value = computeCapaianKpi({kpis}).toFixed(1);
+  }
+
+  // Delegated listener: setiap kali user mengetik di kolom Realisasi (Kurva S)
+  // atau Target/Realisasi (KPI), field terkunci langsung diperbarui otomatis.
+  document.addEventListener('input', function(e){
+    const name = e.target && e.target.getAttribute ? e.target.getAttribute('name') : null;
+    if(name === 'curve_a' || name === 'kpi_target' || name === 'kpi_real'){
+      const table = e.target.closest('table');
+      if(table){
+        const prefix = table.id.split('_')[0];
+        recalcLockedScores(prefix);
+      }
+    }
+  });
+
+
   function activityRowHtml(prefix, v){
     v = v || {};
     return `<td><input type="text" name="act_name" value="${v.act_name||''}"></td><td><input type="number" name="act_prog" min="0" max="100" value="${v.act_prog||''}"></td><td><select name="act_status"><option value="Selesai" ${v.act_status==='Selesai'?'selected':''}>Selesai</option><option value="On Track" ${v.act_status==='On Track'?'selected':''}>On Track</option></select></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
@@ -940,7 +996,14 @@
             <div class="form-group"><label>Bulan/tahun periode laporan</label><input type="month" id="${prefix}_report_period" value="${data.reportPeriod||''}"></div>
           </div>
           <div class="grid-3">
-            <div class="form-group"><label>Nilai isian capaian project (%)</label><input type="number" id="${prefix}_project_score" min="0" max="100" placeholder="0" value="${data.progress||0}"></div>
+            <div class="form-group">
+              <label>Nilai isian capaian project (%)</label>
+              <input type="text" id="${prefix}_project_score" readonly tabindex="-1" style="background:#f1f5f9;color:#64748b;cursor:not-allowed;pointer-events:none;" value="${computeCapaianProject(data).toFixed(1)}">
+            </div>
+            <div class="form-group">
+              <label>Capaian KPI (%)</label>
+              <input type="text" id="${prefix}_kpi_score" readonly tabindex="-1" style="background:#f1f5f9;color:#64748b;cursor:not-allowed;pointer-events:none;" value="${computeCapaianKpi(data).toFixed(1)}">
+            </div>
           </div>
         </div>
 
@@ -1124,10 +1187,14 @@
     const tr = document.createElement('tr');
     tr.innerHTML = rowBuilders[kind](prefix, null);
     tbody.appendChild(tr);
+    recalcLockedScores(prefix);
   }
   function removeRow(btn) {
     const tbody = btn.parentNode.parentNode.parentNode;
+    const table = btn.closest('table');
+    const prefix = table ? table.id.split('_')[0] : null;
     if(tbody.rows.length > 1) tbody.removeChild(btn.parentNode.parentNode);
+    if(prefix) recalcLockedScores(prefix);
   }
 
   const excelColumnMap = {
@@ -1173,6 +1240,7 @@
         const isEmptyFirst = Array.from(firstRow.querySelectorAll('input,select')).every(el=>!el.value);
         if(isEmptyFirst && tbody.rows.length > rows.length) tbody.removeChild(firstRow);
         alert(rows.length+' baris berhasil diimpor dari Excel ke bagian ini.');
+        recalcLockedScores(prefix);
       }catch(err){
         alert('Gagal membaca file Excel: '+err.message);
       }
@@ -1201,6 +1269,8 @@
   }
 
   function collectFormData(prefix){
+    const kpis = readTable(tableId(prefix,'tableKpi'), ['kpi_name','kpi_target','kpi_real','kpi_unit']);
+    const curveS = readTable(tableId(prefix,'tableCurveS'), ['curve_month','curve_p','curve_a']);
     return {
       nama: getVal(prefix,'project_name').trim(),
       donatur: getVal(prefix,'donor').trim(),
@@ -1212,15 +1282,20 @@
       startDate: getVal(prefix,'start_date'),
       endDate: getVal(prefix,'end_date'),
       reportPeriod: getVal(prefix,'report_period'),
-      progress: Math.min(100, Math.max(0, Number(getVal(prefix,'project_score'))||0)),
+      // Nilai isian capaian project (%) sekarang dikunci (readonly) di form.
+      // Diambil otomatis dari Realisasi Aktual Akumulatif pada baris Kurva S paling terbaru.
+      progress: Math.min(100, Math.max(0, computeCapaianProject({curveS}))),
+      // Capaian KPI (%) juga dikunci (readonly) di form.
+      // Diambil dari rata-rata perbandingan Target vs Realisasi di tabel KPI Logframe.
+      capaianKpi: computeCapaianKpi({kpis}),
       // "Nama monev" tidak lagi punya kolom input sendiri (sudah dihapus).
       // Nilainya sekarang otomatis mengikuti isian Project Manager (PM),
       // sehingga laporan dan filter "nama monev" ikut memakai nama PM.
       monevCategory: getVal(prefix,'pm').trim() || 'Non-Monev',
 
       activities: readTable(tableId(prefix,'tableActivity'), ['act_name','act_prog','act_status']),
-      kpis: readTable(tableId(prefix,'tableKpi'), ['kpi_name','kpi_target','kpi_real','kpi_unit']),
-      curveS: readTable(tableId(prefix,'tableCurveS'), ['curve_month','curve_p','curve_a']),
+      kpis: kpis,
+      curveS: curveS,
       schedule: readTable(tableId(prefix,'tableSchedule'), ['sch_name','sch_date','sch_desc']),
       challenges: readTable(tableId(prefix,'tableChallenges'), ['ch_risk','ch_impact','ch_mitigation','ch_status']),
       lessons: readTable(tableId(prefix,'tableLessons'), ['ls_main','ls_rec']),
@@ -1401,6 +1476,7 @@
     document.getElementById('view_donor').innerText = p.donatur || '-';
     document.getElementById('view_location').innerText = p.lokasi || '-';
     document.getElementById('view_pm').innerText = p.pm || '-';
+    document.getElementById('view_capaian_kpi').innerText = computeCapaianKpi(p).toFixed(1) + '%';
     document.getElementById('view_project_duration').innerText = (p.startDate ? fmtTanggal(p.startDate) : '-') + ' s/d ' + (p.endDate ? fmtTanggal(p.endDate) : '-');
     document.getElementById('view_report_period').innerText = p.reportPeriod ? fmtBulan(p.reportPeriod) : '-';
 
