@@ -27,4 +27,28 @@ window.db = db;
 window.addDoc = addDoc;
 window.collection = collection;
 
+window.simpanTest = async function () {
+
+    try {
+
+        await addDoc(collection(db, "projects"), {
+
+            nama: "Project Test",
+
+            status: "Running",
+
+            waktu: new Date()
+
+        });
+
+        console.log("Data berhasil dikirim ke Firestore");
+
+    } catch (e) {
+
+        console.error(e);
+
+    }
+
+}
+
 console.log("Firebase berhasil terkoneksi");
