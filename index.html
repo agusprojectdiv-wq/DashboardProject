@@ -453,6 +453,8 @@
 
 <script>
   const STORAGE_KEY = 'pm_projects_v2';
+  // projects diisi sementara dari cache lokal (untuk render instan),
+  // lalu akan ditimpa otomatis oleh data real-time dari Firestore lewat initFirestoreSync().
   let projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   let activeProjectId = null;
   let reportProjectId = null;
@@ -505,6 +507,53 @@
   const imageCache = {};
 
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
+
+  /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE ============ */
+  // Dipanggil oleh firebase.js setelah koneksi Firestore siap.
+  // Semua perangkat yang membuka halaman ini akan otomatis menerima
+  // perubahan data (tambah/update/hapus) tanpa perlu refresh manual.
+  function initFirestoreSync(){
+    if(!window.db || !window.collection || !window.onSnapshot){
+      console.error('Firestore belum siap, sinkronisasi dibatalkan.');
+      return;
+    }
+    window.onSnapshot(window.collection(window.db, "projects"), (snapshot)=>{
+      projects = snapshot.docs.map(d=>d.data());
+      save(); // simpan juga sebagai cache lokal untuk render instan saat load berikutnya
+      applyAuthUI();
+      renderHome();
+      renderRunning();
+      renderFinish();
+    }, (err)=>{
+      console.error('Gagal sinkronisasi real-time dari Firestore:', err);
+      alert('Koneksi ke database terputus. Periksa koneksi internet Anda.');
+    });
+  }
+  window.initFirestoreSync = initFirestoreSync;
+
+  // Menulis satu project (baru atau update) ke Firestore.
+  async function syncProjectToFirestore(project){
+    try{
+      await window.setDoc(window.doc(window.db, "projects", project.id), project);
+      return true;
+    }catch(err){
+      console.error('Gagal menyimpan ke database:', err);
+      alert('Gagal menyimpan ke database. Cek koneksi internet lalu coba lagi.\n\nDetail: ' + err.message);
+      return false;
+    }
+  }
+
+  // Menghapus satu project dari Firestore.
+  async function deleteProjectFromFirestore(id){
+    try{
+      await window.deleteDoc(window.doc(window.db, "projects", id));
+      return true;
+    }catch(err){
+      console.error('Gagal menghapus dari database:', err);
+      alert('Gagal menghapus dari database. Cek koneksi internet lalu coba lagi.\n\nDetail: ' + err.message);
+      return false;
+    }
+  }
   function uid(){ return 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
   function esc(v){ return (v===undefined||v===null) ? '' : String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
@@ -749,7 +798,7 @@
     `;
   }
 
-  function finishProject(id){
+  async function finishProject(id){
     if(!isAdmin) return;
     const p = projects.find(x=>x.id===id);
     if(!p) return;
@@ -757,19 +806,25 @@
     p.finished = true;
     p.progress = 100;
     p.finishedAt = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+    const ok = await syncProjectToFirestore(p);
+    if(!ok) return;
     save(); renderRunning(); renderFinish();
   }
-  function reopenProject(id){
+  async function reopenProject(id){
     if(!isAdmin) return;
     const p = projects.find(x=>x.id===id);
     if(!p) return;
     p.finished = false;
     p.finishedAt = null;
+    const ok = await syncProjectToFirestore(p);
+    if(!ok) return;
     save(); renderRunning(); renderFinish();
   }
-  function deleteProject(id){
+  async function deleteProject(id){
     if(!isAdmin) return;
     if(!confirm('Hapus project ini? Semua riwayat dan data laporan akan ikut terhapus.')) return;
+    const ok = await deleteProjectFromFirestore(id);
+    if(!ok) return;
     projects = projects.filter(p=>p.id!==id);
     save(); renderRunning(); renderFinish(); renderHome();
   }
@@ -1218,9 +1273,8 @@
       lastUpdatedAt: new Date().toISOString()
     });
 
-     await window.setDoc(
-    window.doc(window.db, "projects", newProject.id),
-    newProject);
+    const ok = await syncProjectToFirestore(newProject);
+    if(!ok) return;
 
     projects.push(newProject);
     save();
@@ -1246,7 +1300,7 @@
     showPage(activeProjectId && projects.find(p=>p.id===activeProjectId && p.finished) ? 'finish' : 'running');
   }
 
-  function updateExistingProject(prefix){
+  async function updateExistingProject(prefix){
     const p = projects.find(x=>x.id===activeProjectId);
     if(!p) return;
     const formData = collectFormData(prefix);
@@ -1260,6 +1314,10 @@
     p.history.sort((a,b)=>a.bulan.localeCompare(b.bulan));
 
     Object.assign(p, formData, { history: p.history, lastUpdatedAt: new Date().toISOString() });
+
+    // INI BAGIAN YANG SEBELUMNYA HILANG: menulis hasil update ke Firestore.
+    const ok = await syncProjectToFirestore(p);
+    if(!ok) return; // jangan tutup form kalau gagal simpan ke database
 
     save();
     document.getElementById('navUpdate').style.display = 'none';
@@ -1447,7 +1505,12 @@
   renderRunning();
   renderFinish();
   renderInputForm();
- 
+
+  // Jaga-jaga: kalau firebase.js sudah lebih dulu siap sebelum baris ini
+  // dieksekusi (jarang terjadi tapi mungkin), langsung mulai sinkronisasi.
+  // Kasus normal: firebase.js akan memanggil window.initFirestoreSync()
+  // sendiri setelah koneksi berhasil (lihat firebase.js).
+  if(window.db){ initFirestoreSync(); }
 </script>
 
  <script type="module" src="firebase.js"></script>
