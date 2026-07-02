@@ -1218,13 +1218,15 @@
       lastUpdatedAt: new Date().toISOString()
     });
 
+     await window.setDoc(
+    window.doc(window.db, "projects", newProject.id),
+    newProject);
+
     projects.push(newProject);
     save();
     renderInputForm();
     showPage('running');
-   await window.setDoc(
-    window.doc(window.db, "projects", newProject.id),
-    newProject);
+ 
   }
 
   /* ============ HALAMAN UPDATE PROJECT (form lengkap) ============ */
