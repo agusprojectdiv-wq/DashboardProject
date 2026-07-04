@@ -332,7 +332,7 @@
 
       <div class="dash-section-container">
         <div class="dash-card">
-          <div class="dash-card-title">1. Pelaksanaan progres aktivitas proyek</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="progres">1</span>. Pelaksanaan progres aktivitas proyek</div>
           <table class="input-table" id="view_table_act" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Komponen deskripsi kerja lapangan</th><th style="width:20%;">Progres aktual</th><th style="width:25%;">Status kerja</th></tr></thead>
             <tbody></tbody>
@@ -340,7 +340,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">2. Indikator utama kinerja kerja (KPI Logframe)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="kpi">2</span>. Indikator utama kinerja kerja (KPI Logframe)</div>
           <div class="kpi-percent-box" id="view_kpi_summary_percentage">RATA-RATA EFEKTIVITAS SASARAN KPI: 0%</div>
           <table class="input-table" id="view_table_kpi" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Indikator sasaran kerja</th><th>Target</th><th>Realisasi</th><th>Efektivitas capaian</th></tr></thead>
@@ -349,18 +349,18 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">3. Diagram kuantitatif demografi penerima manfaat</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="demografi">3</span>. Diagram kuantitatif demografi penerima manfaat</div>
           <div class="pie-charts-grid" id="view_pie_root"></div>
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">4. Grafik visual &amp; tabel capaian kurva S berdasarkan bulan</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="kurva">4</span>. Grafik visual &amp; tabel capaian kurva S berdasarkan bulan</div>
           <div class="curves-display-container">
             <div style="text-align:center; background:#fff; border:1px solid #fed7aa; padding:15px 10px; border-radius:4px; min-height: 200px; display:flex; flex-direction:column; justify-content:center;">
               <svg id="svg_curve_s" viewBox="0 0 480 180" style="width:100%; height:auto; overflow:visible;"></svg>
               <div style="display:flex; justify-content:center; gap:20px; font-size:10px; margin-top:15px; border-top:1px dashed #fed7aa; padding-top:8px;">
                 <span><span style="display:inline-block; width:12px; height:4px; background:#ea580c; margin-right:5px; border-radius:2px;"></span>Target rencana akumulatif</span>
-                <span><span style="display:inline-block; width:12px; height:4px; background:#f97316; margin-right:5px; border-radius:2px;"></span>Realisasi aktual akumulatif</span>
+                <span><span style="display:inline-block; width:12px; height:4px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>Realisasi aktual akumulatif</span>
               </div>
             </div>
             <div>
@@ -374,7 +374,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">5. Rencana jadwal agenda kegiatan terdekat (milestone)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="jadwal">5</span>. Rencana jadwal agenda kegiatan terdekat (milestone)</div>
           <table class="input-table" id="view_table_sch" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Nama agenda kegiatan</th><th style="width:25%;">Tanggal strategis</th><th>Keterangan operasional</th></tr></thead>
             <tbody></tbody>
@@ -382,7 +382,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">6. Matriks kendala &amp; tantangan utama lapangan</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="kendala">6</span>. Matriks kendala &amp; tantangan utama lapangan</div>
           <table class="input-table" id="view_table_challenges" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Tantangan / risiko kritis</th><th style="width:12%;">Dampak</th><th>Mitigasi taktis lapangan</th><th style="width:12%;">Status</th></tr></thead>
             <tbody></tbody>
@@ -390,7 +390,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">7. Pembelajaran teridentifikasi (lesson learned MEAL)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="lesson">7</span>. Pembelajaran teridentifikasi (lesson learned MEAL)</div>
           <table class="input-table" id="view_table_lessons" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Pembelajaran utama kontekstual</th><th>Rekomendasi / rencana aksi strategis</th></tr></thead>
             <tbody></tbody>
@@ -398,15 +398,20 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title">8. Aliansi pemangku kepentingan &amp; mitra kerja</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="aliansi">8</span>. Aliansi pemangku kepentingan &amp; mitra kerja</div>
           <table class="input-table" id="view_table_sh" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Nama instansi lembaga</th><th>Peran makro</th><th>Kontribusi konkret lapangan</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
 
+        <div class="dash-card" id="card_catatan" style="display:none;">
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="catatan">9</span>. Catatan</div>
+          <div id="view_catatan" style="font-size:12px; white-space:pre-wrap; line-height:1.6;">-</div>
+        </div>
+
         <div class="dash-card">
-          <div class="dash-card-title">9. Dokumentasi visual aktivitas proyek</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="dokumentasi">9</span>. Dokumentasi visual aktivitas proyek</div>
           <div class="photo-grid-out" id="view_photo_grid"></div>
         </div>
       </div>
@@ -1169,7 +1174,14 @@
         </div>
 
         <div class="form-section">
-          <div class="section-title">9. Pengaturan logo institusi &amp; logo mitra (kanan atas laporan)</div>
+          <div class="section-title">9. Catatan <span style="font-weight:400; color:#a8a29e;">(opsional — kalau dikosongkan, section ini tidak akan muncul di laporan)</span></div>
+          <div class="form-group">
+            <textarea id="${prefix}_catatan" rows="4" placeholder="Tulis catatan tambahan di sini (opsional)...">${esc(data.catatan)}</textarea>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">10. Pengaturan logo institusi &amp; logo mitra (kanan atas laporan)</div>
           <div class="grid-2">
             <div class="photo-card">
               <label style="font-size:11px; font-weight:700; color:#ea580c; display:block; margin-bottom:8px;">Logo lembaga</label>
@@ -1187,7 +1199,7 @@
         </div>
 
         <div class="form-section">
-          <div class="section-title">10. Dokumentasi &amp; foto lapangan (maksimal 3 foto)</div>
+          <div class="section-title">11. Dokumentasi &amp; foto lapangan (maksimal 3 foto)</div>
           <div class="grid-3">
             ${[1,2,3].map(i=>photoCardHtml(prefix, i, (data.photos&&data.photos[i-1])||null)).join('')}
           </div>
@@ -1328,6 +1340,7 @@
       // Nilainya sekarang otomatis mengikuti isian Project Manager (PM),
       // sehingga laporan dan filter "nama monev" ikut memakai nama PM.
       monevCategory: getVal(prefix,'pm').trim() || 'Non-Monev',
+      catatan: getVal(prefix,'catatan').trim(),
 
       activities: readTable(tableId(prefix,'tableActivity'), ['act_name','act_prog','act_status']),
       kpis: kpis,
@@ -1508,7 +1521,7 @@
     const mtContainer = document.getElementById('container_logo_mitra_out');
     mtContainer.innerHTML = p.logos && p.logos.mitra ? `<img src="${p.logos.mitra}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Mitra</span>`;
 
-    document.getElementById('view_project_value').innerText = p.projectValueText || fmtRupiah(p.target) || '-';
+    document.getElementById('view_project_value').innerText = formatRupiahInputValue(p.projectValueText) || fmtRupiah(p.target) || '-';
     document.getElementById('view_donor').innerText = p.donatur || '-';
     document.getElementById('view_location').innerText = p.lokasi || '-';
     document.getElementById('view_pm').innerText = p.pm || '-';
@@ -1616,6 +1629,33 @@
       if(ph.data) photoGridOut.innerHTML += `<div class="photo-out-item"><img src="${ph.data}" class="photo-out-img"><span class="photo-out-lbl">${ph.label || ('Foto '+(i+1))}</span></div>`;
     });
     if(photoGridOut.innerHTML === '') photoGridOut.innerHTML = '<div style="grid-column:span 3; text-align:center; padding:15px; font-size:11px; color:#a8a29e;">Tidak ada dokumentasi foto kerja lapangan yang diunggah.</div>';
+
+    // Kartu "Catatan" hanya ditampilkan kalau ada isinya. Kalau kosong,
+    // kartu disembunyikan total dan nomor section sesudahnya otomatis maju
+    // (tidak ada nomor yang loncat), lihat renumberReportSections() di bawah.
+    const catatanText = (p.catatan || '').trim();
+    const catatanCard = document.getElementById('card_catatan');
+    if(catatanText){
+      catatanCard.style.display = '';
+      document.getElementById('view_catatan').innerText = catatanText;
+    }else{
+      catatanCard.style.display = 'none';
+    }
+    renumberReportSections(!!catatanText);
+  }
+
+  // Menomori ulang urutan section laporan (1, 2, 3, ...) secara dinamis.
+  // Section "Catatan" hanya diikutsertakan dalam urutan kalau sedang terisi,
+  // sehingga section-section berikutnya (mis. Dokumentasi) tidak pernah
+  // menampilkan nomor yang bolong/loncat.
+  function renumberReportSections(showCatatan){
+    const order = ['progres','kpi','demografi','kurva','jadwal','kendala','lesson','aliansi'];
+    if(showCatatan) order.push('catatan');
+    order.push('dokumentasi');
+    order.forEach((secId, idx)=>{
+      const el = document.querySelector(`.sec-num[data-sec-id="${secId}"]`);
+      if(el) el.textContent = idx + 1;
+    });
   }
 
   /* ============ INIT ============ */
