@@ -643,6 +643,13 @@
     return 0;
   }
 
+  // Satu-satunya sumber kebenaran untuk "capaian project (%)" di seluruh halaman
+  // (laporan, home, running, finish, chart) — selalu dihitung langsung dari
+  // data Kurva S saat ini, bukan dari field tersimpan yang bisa saja usang.
+  function getProjectProgress(p){
+    return Math.min(100, Math.max(0, computeCapaianProject(p)));
+  }
+
   // Capaian KPI (%): dikunci, diambil dari rata-rata perbandingan
   // Realisasi vs Target pada semua baris KPI Logframe.
   function computeCapaianKpi(p){
@@ -683,7 +690,7 @@
       type:'bar',
       data:{
         labels: top.map(p=>(p.nama||'-').length>16 ? p.nama.slice(0,16)+'…' : (p.nama||'-')),
-        datasets:[{ label:'Progress (%)', data: top.map(p=>p.progress||0), backgroundColor: top.map((_,i)=>palette[i%palette.length]), borderRadius:8, maxBarThickness:36 }]
+        datasets:[{ label:'Progress (%)', data: top.map(p=>getProjectProgress(p)), backgroundColor: top.map((_,i)=>palette[i%palette.length]), borderRadius:8, maxBarThickness:36 }]
       },
       options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ min:0, max:100, ticks:{stepSize:25} } } }
     });
@@ -743,12 +750,12 @@
               <td>${totalPenerimaManfaat(p).toLocaleString('id-ID')}</td>
               <td>
                 <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
-                  <span class="progress-text">${p.progress||0}%</span>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${getProjectProgress(p)}%"></div></div>
+                  <span class="progress-text">${getProjectProgress(p).toFixed(1)}%</span>
                 </div>
               </td>
               <td>${computeCapaianKpi(p).toFixed(1)}%</td>
-              <td>${statusBadge(p.progress||0)}</td>
+              <td>${statusBadge(getProjectProgress(p))}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -778,8 +785,8 @@
               <td>${p.lokasi||'-'}</td>
               <td>
                 <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
-                  <span class="progress-text">${p.progress||0}%</span>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${getProjectProgress(p)}%"></div></div>
+                  <span class="progress-text">${getProjectProgress(p).toFixed(1)}%</span>
                 </div>
               </td>
               <td>${last ? fmtBulan(last.bulan) : '-'}</td>
@@ -818,8 +825,8 @@
               <td>${p.lokasi||'-'}</td>
               <td>
                 <div class="progress-wrap">
-                  <div class="progress-bar"><div class="progress-fill" style="width:${p.progress||0}%"></div></div>
-                  <span class="progress-text">${p.progress||0}%</span>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${getProjectProgress(p)}%"></div></div>
+                  <span class="progress-text">${getProjectProgress(p).toFixed(1)}%</span>
                 </div>
               </td>
               <td>${p.finishedAt || '-'}</td>
@@ -845,7 +852,8 @@
     if(!p) return;
     if(!confirm('Tandai project "'+p.nama+'" sebagai selesai? Project akan dipindahkan ke menu Project Finish.')) return;
     p.finished = true;
-    p.progress = 100;
+    // Catatan: progress TIDAK lagi dipaksa jadi 100 di sini — nilainya selalu
+    // mengikuti "Nilai isian capaian project" yang dihitung dari data Kurva S.
     p.finishedAt = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
     const ok = await syncProjectToFirestore(p);
     if(!ok) return;
@@ -1493,7 +1501,7 @@
   function renderReport(p){
     document.getElementById('view_project_title').innerText = p.nama || '-';
     document.getElementById('view_box_project_name').innerText = p.nama || '-';
-    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PEKERJAAN PROJECT: ${p.progress||0}%`;
+    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PEKERJAAN PROJECT: ${getProjectProgress(p).toFixed(1)}%`;
 
     const rzContainer = document.getElementById('container_logo_rz_out');
     rzContainer.innerHTML = p.logos && p.logos.rz ? `<img src="${p.logos.rz}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Logo lembaga</span>`;
