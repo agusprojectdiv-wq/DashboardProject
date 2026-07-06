@@ -1466,17 +1466,26 @@
       `;
     }
     let accumulatedPercent = 0; let svgPaths = '';
-    segments.forEach(seg => {
-      const pct = total > 0 ? (seg.val / total) * 100 : 0; if (pct <= 0) return;
-      const startAngle = (accumulatedPercent / 100) * 360; accumulatedPercent += pct;
-      const endAngle = (accumulatedPercent / 100) * 360;
-      const x1 = 50 + 40 * Math.cos((startAngle - 90) * Math.PI / 180);
-      const y1 = 50 + 40 * Math.sin((startAngle - 90) * Math.PI / 180);
-      const x2 = 50 + 40 * Math.cos((endAngle - 90) * Math.PI / 180);
-      const y2 = 50 + 40 * Math.sin((endAngle - 90) * Math.PI / 180);
-      const largeArcFlag = pct > 50 ? 1 : 0;
-      svgPaths += `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z" fill="${seg.color}" stroke="#fff" stroke-width="1.5"></path>`;
-    });
+    // Jika hanya SATU kategori yang punya isian (persentasenya jadi 100%),
+    // rumus arc SVG biasa akan gagal digambar karena titik awal & titik akhir
+    // lengkungnya jadi sama persis (0deg = 360deg) — hasilnya lingkaran kosong/
+    // tidak terlihat sama sekali. Untuk kasus ini, gambar lingkaran penuh langsung.
+    const filledSegments = segments.filter(seg => total > 0 && (seg.val / total) * 100 > 0);
+    if(filledSegments.length === 1){
+      svgPaths += `<circle cx="50" cy="50" r="40" fill="${filledSegments[0].color}" stroke="#78716c" stroke-width="1"></circle>`;
+    } else {
+      segments.forEach(seg => {
+        const pct = total > 0 ? (seg.val / total) * 100 : 0; if (pct <= 0) return;
+        const startAngle = (accumulatedPercent / 100) * 360; accumulatedPercent += pct;
+        const endAngle = (accumulatedPercent / 100) * 360;
+        const x1 = 50 + 40 * Math.cos((startAngle - 90) * Math.PI / 180);
+        const y1 = 50 + 40 * Math.sin((startAngle - 90) * Math.PI / 180);
+        const x2 = 50 + 40 * Math.cos((endAngle - 90) * Math.PI / 180);
+        const y2 = 50 + 40 * Math.sin((endAngle - 90) * Math.PI / 180);
+        const largeArcFlag = pct > 50 ? 1 : 0;
+        svgPaths += `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z" fill="${seg.color}" stroke="#78716c" stroke-width="1"></path>`;
+      });
+    }
     svgPaths += `<circle cx="50" cy="50" r="24" fill="#ffffff"></circle>`;
 
     let legendHtml = '';
@@ -1554,10 +1563,10 @@
 
     const d = p.demografi || {};
     const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
-    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#fdba74'}]);
-    pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#fdba74'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
-    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.sd+d.smp+d.sma+d.pt), [{label:'SD', val:d.sd||0, color:'#9a3412'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#fed7aa'}]);
-    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age15+d.age25+d.age35+d.age45), [{label:'15-24', val:d.age15||0, color:'#9a3412'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#fed7aa'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.sd+d.smp+d.sma+d.pt), [{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age15+d.age25+d.age35+d.age45), [{label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}]);
 
     const curveRows = p.curveS || [];
     const summaryBody = document.getElementById('view_table_curves_summary').querySelector('tbody');
