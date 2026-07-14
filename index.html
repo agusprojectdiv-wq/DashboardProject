@@ -515,6 +515,15 @@
   const palette = ['#7c5cff','#0fb88a','#ff7a5c','#3a8dff','#ffb02e','#ff5c8a','#36c5d4','#9b6bff'];
   const imageCache = {};
 
+  // Membersihkan cache gambar milik prefix tertentu ('in' atau 'upd') setiap
+  // kali form dibuka ulang untuk project lain — supaya foto/logo yang baru
+  // saja diupload di sesi sebelumnya tidak "kebawa" ke project berikutnya.
+  function clearImageCacheForPrefix(prefix){
+    Object.keys(imageCache).forEach(k=>{
+      if(k.indexOf(prefix + '_') === 0) delete imageCache[k];
+    });
+  }
+
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
 
   /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE ============ */
@@ -1229,6 +1238,18 @@
     }
   }
 
+  // Mengambil nilai gambar (logo/foto) yang akan disimpan:
+  // 1) Kalau user baru saja upload file baru -> pakai itu (dari imageCache).
+  // 2) Kalau TIDAK upload ulang -> pakai gambar lama yang masih tampil di
+  //    preview (dibaca dari atribut src elemen <img>-nya), bukan dianggap kosong.
+  // Ini mencegah foto/logo lama hilang setiap kali project diupdate.
+  function getImageValue(imgId){
+    if(imageCache[imgId]) return imageCache[imgId];
+    const el = document.getElementById(imgId);
+    const raw = el ? el.getAttribute('src') : null;
+    return (raw && raw.trim() !== '') ? raw : null;
+  }
+
   function addRow(tableElId, kind) {
     const tbody = document.getElementById(tableElId).getElementsByTagName('tbody')[0];
     const prefix = tableElId.split('_')[0];
@@ -1366,11 +1387,11 @@
       },
 
       logos: {
-        rz: imageCache[prefix+'_prev_logo_rz'] || null,
-        mitra: imageCache[prefix+'_prev_logo_mitra'] || null
+        rz: getImageValue(prefix+'_prev_logo_rz'),
+        mitra: getImageValue(prefix+'_prev_logo_mitra')
       },
       photos: [1,2,3].map(i=>({
-        data: imageCache[prefix+'_prev_img_'+i] || null,
+        data: getImageValue(prefix+'_prev_img_'+i),
         label: getVal(prefix,'lbl_img_'+i).trim()
       }))
     };
@@ -1378,6 +1399,7 @@
 
   /* ============ HALAMAN INPUT PROJECT BARU ============ */
  function renderInputForm(){
+    clearImageCacheForPrefix('in');
     document.getElementById('inputFormMount').innerHTML = buildMealForm('in', {}, 'new');
   }
 
@@ -1413,6 +1435,7 @@
     activeProjectId = id;
     const p = projects.find(x=>x.id===id);
     if(!p) return;
+    clearImageCacheForPrefix('upd');
     document.getElementById('updatePageTitle').innerText = 'Update project: ' + (p.nama||'-');
     document.getElementById('updateFormMount').innerHTML = buildMealForm('upd', p, 'update');
     document.getElementById('navUpdate').style.display = 'inline-block';
