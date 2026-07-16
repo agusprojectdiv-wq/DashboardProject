@@ -332,7 +332,7 @@
 
       <div class="dash-section-container">
         <div class="dash-card">
-          <div class="dash-card-title"><span class="sec-num" data-sec-id="progres">1</span>. Pelaksanaan progres aktivitas proyek</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="progres">1</span>. Pelaksanaan aktivitas proyek</div>
           <table class="input-table" id="view_table_act" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Komponen deskripsi kerja lapangan</th><th style="width:20%;">Progres aktual</th><th style="width:25%;">Status kerja</th></tr></thead>
             <tbody></tbody>
@@ -340,7 +340,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title"><span class="sec-num" data-sec-id="kpi">2</span>. Indikator utama kinerja kerja (KPI Logframe)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="kpi">2</span>. Indikator Key Performance Indicator (KPI)</div>
           <div class="kpi-percent-box" id="view_kpi_summary_percentage">RATA-RATA EFEKTIVITAS SASARAN KPI: 0%</div>
           <table class="input-table" id="view_table_kpi" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Indikator sasaran kerja</th><th>Target</th><th>Realisasi</th><th>Efektivitas capaian</th></tr></thead>
@@ -374,7 +374,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title"><span class="sec-num" data-sec-id="jadwal">5</span>. Rencana jadwal agenda kegiatan terdekat (milestone)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="jadwal">5</span>. Rencana kegiatan terdekat</div>
           <table class="input-table" id="view_table_sch" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Nama agenda kegiatan</th><th style="width:25%;">Tanggal strategis</th><th>Keterangan operasional</th></tr></thead>
             <tbody></tbody>
@@ -390,7 +390,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title"><span class="sec-num" data-sec-id="lesson">7</span>. Pembelajaran teridentifikasi (lesson learned MEAL)</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="lesson">7</span>. Pembelajaran teridentifikasi (lesson learned)</div>
           <table class="input-table" id="view_table_lessons" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Pembelajaran utama kontekstual</th><th>Rekomendasi / rencana aksi strategis</th></tr></thead>
             <tbody></tbody>
@@ -398,7 +398,7 @@
         </div>
 
         <div class="dash-card">
-          <div class="dash-card-title"><span class="sec-num" data-sec-id="aliansi">8</span>. Aliansi pemangku kepentingan &amp; mitra kerja</div>
+          <div class="dash-card-title"><span class="sec-num" data-sec-id="aliansi">8</span>. Stakeholder proyek</div>
           <table class="input-table" id="view_table_sh" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Nama instansi lembaga</th><th>Peran makro</th><th>Kontribusi konkret lapangan</th></tr></thead>
             <tbody></tbody>
@@ -1059,7 +1059,7 @@
 
         <div class="form-section">
           <div class="section-title">
-            <span>1. Status progres aktual pelaksanaan kegiatan</span>
+            <span>1. Pelaksanaan aktivitas proyek</span>
             <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableActivity'), 'activity', 'Aktivitas')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableActivity')}','activity')">+ Tambah</button></span>
           </div>
           <table class="input-table" id="${tableId(prefix,'tableActivity')}">
@@ -1070,7 +1070,7 @@
 
         <div class="form-section">
           <div class="section-title">
-            <span>2. Indikator utama kinerja kerja (KPI Logframe)</span>
+            <span>2. Indikator Key Performance Indicator (KPI)</span>
             <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableKpi'), 'kpi', 'KPI')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableKpi')}','kpi')">+ Tambah KPI</button></span>
           </div>
           <table class="input-table" id="${tableId(prefix,'tableKpi')}">
@@ -1140,7 +1140,7 @@
 
         <div class="form-section">
           <div class="section-title">
-            <span>5. Rencana jadwal agenda kegiatan terdekat (milestone)</span>
+            <span>5. Rencana kegiatan terdekat</span>
             <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableSchedule'), 'schedule', 'Jadwal')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableSchedule')}','schedule')">+ Tambah jadwal</button></span>
           </div>
           <table class="input-table" id="${tableId(prefix,'tableSchedule')}">
@@ -1162,7 +1162,7 @@
 
         <div class="form-section">
           <div class="section-title">
-            <span>7. Pembelajaran kontekstual (lesson learned MEAL)</span>
+            <span>7. Pembelajaran teridentifikasi (lesson learned)</span>
             <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableLessons'), 'lesson', 'LessonLearned')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableLessons')}','lesson')">+ Tambah pembelajaran</button></span>
           </div>
           <table class="input-table" id="${tableId(prefix,'tableLessons')}">
@@ -1173,7 +1173,7 @@
 
         <div class="form-section">
           <div class="section-title">
-            <span>8. Stakeholder &amp; mitra kerja lapangan</span>
+            <span>8. Stakeholder proyek</span>
             <span style="display:flex; gap:6px;">${excelUploadButton(prefix, tableId(prefix,'tableStakeholder'), 'stakeholder', 'Stakeholder')}<button type="button" class="meal-btn meal-btn-add" onclick="addRow('${tableId(prefix,'tableStakeholder')}','stakeholder')">+ Tambah mitra</button></span>
           </div>
           <table class="input-table" id="${tableId(prefix,'tableStakeholder')}">
