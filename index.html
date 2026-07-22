@@ -753,10 +753,11 @@
     }
     wrap.innerHTML = `
       <table class="dashtable">
-        <thead><tr><th>Nama project</th><th>Donatur</th><th>Jenis</th><th>Lokasi</th><th>Penerima manfaat</th><th>Progress</th><th>Capaian KPI</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID Mipro</th><th>Nama project</th><th>Donatur</th><th>Jenis</th><th>Lokasi</th><th>Penerima manfaat</th><th>Progress</th><th>Capaian KPI</th><th>Status</th></tr></thead>
         <tbody>
           ${list.map(p=>`
             <tr>
+              <td>${p.miproId || '-'}</td>
               <td><span class="project-title-link" onclick="openReport('${p.id}')">${p.nama||'-'}</span></td>
               <td>${p.donatur||'-'}</td>
               <td>${p.jenis||'-'}</td>
@@ -1031,19 +1032,22 @@
         <div class="form-section">
           <div class="section-title">Data umum, periode pembukuan &amp; parameter utama</div>
           <div class="grid-3">
+            <div class="form-group"><label>ID Mipro</label><input type="text" id="${prefix}_mipro_id" placeholder="ID Mipro" value="${esc(data.miproId)}"></div>
             <div class="form-group"><label>Nama proyek</label><input type="text" id="${prefix}_project_name" placeholder="Nama project" value="${data.nama||''}"></div>
             <div class="form-group"><label>Donatur / lembaga donor</label><input type="text" id="${prefix}_donor" placeholder="Nama donatur" value="${data.donatur||''}"></div>
-            <div class="form-group"><label>Nilai proyek (Pagu Rp)</label><input type="text" id="${prefix}_project_value" placeholder="Rp 0" value="${formatRupiahInputValue(data.projectValueText)}"></div>
           </div>
           <div class="grid-3">
+            <div class="form-group"><label>Nilai proyek (Pagu Rp)</label><input type="text" id="${prefix}_project_value" placeholder="Rp 0" value="${formatRupiahInputValue(data.projectValueText)}"></div>
             <div class="form-group"><label>Jenis project</label><input type="text" id="${prefix}_project_type" placeholder="Contoh: Pendidikan, Kesehatan" value="${data.jenis||''}"></div>
             <div class="form-group"><label>Wilayah / lokasi sasaran</label><input type="text" id="${prefix}_location" placeholder="Kota / provinsi" value="${data.lokasi||''}"></div>
-            <div class="form-group"><label>Project manager (PM)</label><input type="text" id="${prefix}_pm" placeholder="Nama PIC" value="${data.pm||''}"></div>
           </div>
           <div class="grid-3">
+            <div class="form-group"><label>Project manager (PM)</label><input type="text" id="${prefix}_pm" placeholder="Nama PIC" value="${data.pm||''}"></div>
             <div class="form-group"><label>Tanggal mulai implementasi</label><input type="date" id="${prefix}_start_date" value="${data.startDate||''}"></div>
             <div class="form-group"><label>Tanggal akhir implementasi</label><input type="date" id="${prefix}_end_date" value="${data.endDate||''}"></div>
-            <div class="form-group"><label>Bulan/tahun periode laporan</label><input type="month" id="${prefix}_report_period" value="${data.reportPeriod||''}"></div>
+          </div>
+          <div class="grid-3">
+            <div class="form-group"><label>Tanggal periode laporan</label><input type="date" id="${prefix}_report_period" value="${data.reportPeriod||''}"></div>
           </div>
           <div class="grid-3">
             <div class="form-group">
@@ -1341,6 +1345,10 @@
     const kpis = readTable(tableId(prefix,'tableKpi'), ['kpi_name','kpi_target','kpi_real','kpi_unit']);
     const curveS = readTable(tableId(prefix,'tableCurveS'), ['curve_month','curve_p','curve_a']);
     return {
+      // ID Mipro: field baru, tidak wajib. Project lama (12 project yang sudah
+      // ada) tetap aman tersimpan walau field ini kosong -- tinggal dibuka lewat
+      // Update lalu diisi ID Mipro-nya kalau perlu, lalu disave seperti biasa.
+      miproId: getVal(prefix,'mipro_id').trim(),
       nama: getVal(prefix,'project_name').trim(),
       donatur: getVal(prefix,'donor').trim(),
       jenis: getVal(prefix,'project_type').trim(),
@@ -1606,6 +1614,9 @@
 
     curveRows.forEach((row, idx)=>{
       const mName = bulanName(row.curve_month);
+      // Sumbu X grafik cukup pakai 3 huruf pertama bulan (Jan, Feb, dst),
+      // sedangkan tabel ringkasan di bawah tetap pakai nama bulan lengkap.
+      const mShort = (row.curve_month || '').slice(0, 3);
       const pVal = parseFloat(row.curve_p)||0;
       // Realisasi dianggap "terisi" hanya jika benar-benar ada isian (bukan kosong),
       // supaya bulan yang belum diisi realisasinya tidak dianggap 0.
@@ -1615,7 +1626,7 @@
       let x = 40 + (idx * xInterval);
       let yPlan = 130 - (pVal * 1.0);
       svgPointsPlan += `${x},${yPlan} `;
-      svgElementsGroup += `<text x="${x}" y="152" fill="#475569" font-size="10" font-weight="600" text-anchor="middle">${mName}</text>`;
+      svgElementsGroup += `<text x="${x}" y="152" fill="#475569" font-size="10" font-weight="600" text-anchor="middle">${mShort}</text>`;
       svgElementsGroup += `<circle cx="${x}" cy="${yPlan}" r="4" fill="#ea580c"></circle><text x="${x}" y="${yPlan-8}" fill="#c2410c" font-size="9" font-weight="bold" text-anchor="middle">${pVal.toFixed(1)}%</text>`;
       // Titik & garis realisasi hanya digambar sampai bulan terakhir yang diisi.
       // Bulan yang realisasinya masih kosong tidak ditarik ke 0 dan tidak memperpanjang garis.
