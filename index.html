@@ -81,7 +81,7 @@
   .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .filter-bar select{padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;min-width:160px;background:#fffdfb;}
 
-  /* ===== FORM INPUT MEAL ===== */
+  /* ===== FORM INPUT MEAL (dari file user) ===== */
   .meal-card-box { background: #ffffff; border-radius: 8px; border: 1px solid #fed7aa; overflow: hidden; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.05); margin-bottom: 25px; font-family: 'Segoe UI', sans-serif; }
   .meal-header-app { background-color: #ea580c; color: #ffffff; padding: 20px 25px; border-bottom: 4px solid #c2410c; }
   .meal-header-app h2 { font-size: 18px; font-weight: 600; margin:0; color:#fff; }
@@ -254,7 +254,7 @@
     </div>
   </div>
 
-  <!-- ============ INPUT PROJECT BARU ============ -->
+  <!-- ============ INPUT PROJECT BARU (form MEAL lengkap) ============ -->
   <div class="page" id="page-input">
     <div class="meal-card-box">
       <div class="meal-header-app">
@@ -281,7 +281,7 @@
     </div>
   </div>
 
-  <!-- ============ HALAMAN UPDATE PROJECT ============ -->
+  <!-- ============ HALAMAN UPDATE PROJECT (form lengkap, prefix upd_) ============ -->
   <div class="page" id="page-update">
     <div class="back-bar no-print">
       <span><strong>Update project</strong> &mdash; ubah data lalu klik save untuk menyimpan sebagai update bulan ini.</span>
@@ -427,6 +427,8 @@
 
 </main>
 
+
+
 <!-- MODAL: HISTORY VIEW -->
 <div class="modal-overlay no-print" id="historyModal" style="position:fixed;inset:0;background:rgba(45,30,60,.45);display:none;align-items:center;justify-content:center;z-index:50;">
   <div style="background:#fff;border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:85vh;overflow-y:auto;">
@@ -460,6 +462,8 @@
 
 <script>
   const STORAGE_KEY = 'pm_projects_v2';
+  // projects diisi sementara dari cache lokal (untuk render instan),
+  // lalu akan ditimpa otomatis oleh data real-time dari Firestore lewat initFirestoreSync().
   let projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   let activeProjectId = null;
   let reportProjectId = null;
@@ -511,6 +515,9 @@
   const palette = ['#7c5cff','#0fb88a','#ff7a5c','#3a8dff','#ffb02e','#ff5c8a','#36c5d4','#9b6bff'];
   const imageCache = {};
 
+  // Membersihkan cache gambar milik prefix tertentu ('in' atau 'upd') setiap
+  // kali form dibuka ulang untuk project lain — supaya foto/logo yang baru
+  // saja diupload di sesi sebelumnya tidak "kebawa" ke project berikutnya.
   function clearImageCacheForPrefix(prefix){
     Object.keys(imageCache).forEach(k=>{
       if(k.indexOf(prefix + '_') === 0) delete imageCache[k];
@@ -520,6 +527,9 @@
   function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
 
   /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE ============ */
+  // Dipanggil oleh firebase.js setelah koneksi Firestore siap.
+  // Semua perangkat yang membuka halaman ini akan otomatis menerima
+  // perubahan data (tambah/update/hapus) tanpa perlu refresh manual.
   function initFirestoreSync(){
     if(!window.db || !window.collection || !window.onSnapshot){
       console.error('Firestore belum siap, sinkronisasi dibatalkan.');
@@ -527,7 +537,7 @@
     }
     window.onSnapshot(window.collection(window.db, "projects"), (snapshot)=>{
       projects = snapshot.docs.map(d=>d.data());
-      save();
+      save(); // simpan juga sebagai cache lokal untuk render instan saat load berikutnya
       applyAuthUI();
       renderHome();
       renderRunning();
@@ -539,11 +549,9 @@
   }
   window.initFirestoreSync = initFirestoreSync;
 
+  // Menulis satu project (baru atau update) ke Firestore.
   async function syncProjectToFirestore(project){
     try{
-      if(!window.db || !window.doc || !window.setDoc){
-        return true;
-      }
       await window.setDoc(window.doc(window.db, "projects", project.id), project);
       return true;
     }catch(err){
@@ -553,11 +561,9 @@
     }
   }
 
+  // Menghapus satu project dari Firestore.
   async function deleteProjectFromFirestore(id){
     try{
-      if(!window.db || !window.doc || !window.deleteDoc){
-        return true;
-      }
       await window.deleteDoc(window.doc(window.db, "projects", id));
       return true;
     }catch(err){
@@ -566,10 +572,11 @@
       return false;
     }
   }
-
   function uid(){ return 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
   function esc(v){ return (v===undefined||v===null) ? '' : String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
+  // Format nominal ke gaya Indonesia: "Rp 1.250.000" — dipakai baik saat
+  // mengetik di form isian (live) maupun untuk menampilkan nilai tersimpan.
   function formatRupiahInputValue(raw){
     const digits = (String(raw||'').match(/\d+/g) || []).join('');
     if(!digits) return '';
@@ -577,6 +584,9 @@
   }
   function fmtBulan(ym){
     if(!ym || typeof ym !== 'string') return '-';
+    // Nilai bisa berformat "YYYY-MM" (data lama) atau "YYYY-MM-DD" (data baru
+    // sejak field tanggal pakai kalender penuh) — keduanya ditangani di sini,
+    // dan kalau datanya rusak/tidak lengkap, tampilkan "-" bukan "undefined".
     const parts = ym.split('-');
     const y = parts[0];
     const mi = parseInt(parts[1], 10);
@@ -639,6 +649,9 @@
     return (Number(d.male)||0) + (Number(d.female)||0);
   }
 
+  // Nilai isian capaian project (%): dikunci, diambil dari kolom
+  // "Realisasi Aktual Akumulatif (%)" pada baris Kurva S paling terakhir yang SUDAH DIISI.
+  // Baris dengan realisasi masih kosong (walau target sudah diisi) dilewati.
   function computeCapaianProject(p){
     const curve = p.curveS || [];
     for(let i = curve.length - 1; i >= 0; i--){
@@ -650,10 +663,15 @@
     return 0;
   }
 
+  // Satu-satunya sumber kebenaran untuk "capaian project (%)" di seluruh halaman
+  // (laporan, home, running, finish, chart) — selalu dihitung langsung dari
+  // data Kurva S saat ini, bukan dari field tersimpan yang bisa saja usang.
   function getProjectProgress(p){
     return Math.min(100, Math.max(0, computeCapaianProject(p)));
   }
 
+  // Capaian KPI (%): dikunci, diambil dari rata-rata perbandingan
+  // Realisasi vs Target pada semua baris KPI Logframe.
   function computeCapaianKpi(p){
     const kpis = p.kpis || [];
     if(!kpis.length) return 0;
@@ -667,6 +685,10 @@
     return countKpi > 0 ? (sumPct / countKpi) : 0;
   }
 
+  // Catatan kurva S kini diisi manual. Fungsi ini HANYA dipakai sebagai
+  // fallback untuk project LAMA yang belum pernah punya field "curveNote"
+  // (curveNote === undefined), supaya catatan otomatis yang dulu tampil
+  // tetap ada persis seperti sebelumnya sampai admin menggantinya secara manual.
   function computeCurveAutoNote(curveS){
     let absoluteGap = 0, lastMonthWithGap = '';
     (curveS||[]).forEach(row=>{
@@ -794,6 +816,9 @@
         <tbody>
           ${list.map(p=>{
             const hist = p.history||[];
+            // Ambil entri dengan nilai "bulan" TERBESAR (bukan asal elemen
+            // terakhir di array) -- lebih tahan terhadap data lama yang
+            // formatnya beda (YYYY-MM vs YYYY-MM-DD) atau belum sempat tersortir.
             const last = hist.length ? hist.reduce((a,b)=> ((a.bulan||'') >= (b.bulan||'') ? a : b)) : null;
             return `
             <tr>
@@ -869,6 +894,8 @@
     if(!p) return;
     if(!confirm('Tandai project "'+p.nama+'" sebagai selesai? Project akan dipindahkan ke menu Project Finish.')) return;
     p.finished = true;
+    // Catatan: progress TIDAK lagi dipaksa jadi 100 di sini — nilainya selalu
+    // mengikuti "Nilai isian capaian project" yang dihitung dari data Kurva S.
     p.finishedAt = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
     const ok = await syncProjectToFirestore(p);
     if(!ok) return;
@@ -908,9 +935,11 @@
   }
   function closeHistoryModal(){ document.getElementById('historyModal').style.display = 'none'; }
 
-  /* ============ TEMPLATE FORM MEAL ============ */
+  /* ============ TEMPLATE FORM MEAL (reusable, berbasis prefix) ============ */
   function tableId(prefix, base){ return prefix + '_' + base; }
 
+  // Menghitung ulang nilai field terkunci "Nilai isian capaian project (%)"
+  // dan "Capaian KPI (%)" langsung dari isi tabel Kurva S dan KPI saat ini di form.
   function recalcLockedScores(prefix){
     const curveTableId = tableId(prefix, 'tableCurveS');
     const kpiTableId = tableId(prefix, 'tableKpi');
@@ -925,6 +954,8 @@
     if(kpiScoreEl) kpiScoreEl.value = computeCapaianKpi({kpis}).toFixed(1);
   }
 
+  // Delegated listener: setiap kali user mengetik di kolom Realisasi (Kurva S)
+  // atau Target/Realisasi (KPI), field terkunci langsung diperbarui otomatis.
   document.addEventListener('input', function(e){
     const name = e.target && e.target.getAttribute ? e.target.getAttribute('name') : null;
     if(name === 'curve_a' || name === 'kpi_target' || name === 'kpi_real'){
@@ -936,6 +967,8 @@
     }
   });
 
+  // Delegated listener: field "Nilai proyek (Pagu Rp)" otomatis diformat
+  // pakai separator ribuan titik ala Indonesia ("Rp 1.250.000") sambil mengetik.
   document.addEventListener('input', function(e){
     if(e.target && e.target.id && e.target.id.endsWith('_project_value')){
       const el = e.target;
@@ -946,6 +979,7 @@
       el.setSelectionRange(newPos, newPos);
     }
   });
+
 
   function activityRowHtml(prefix, v){
     v = v || {};
@@ -1115,13 +1149,13 @@
               <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan kelompok usia</label>
               <table class="input-table">
                 <tbody>
-                  <tr><td>Usia &lt; 5 tahun</td><td><input type="number" id="${prefix}_age_5" value="${d.age5||0}"></td></tr>
+                  <tr><td>Usia < 5 tahun</td><td><input type="number" id="${prefix}_age_5" value="${d.age5||0}"></td></tr>
                   <tr><td>Usia 6-14 tahun</td><td><input type="number" id="${prefix}_age_6" value="${d.age6||0}"></td></tr>
                   <tr><td>Usia 15-24 tahun</td><td><input type="number" id="${prefix}_age_15" value="${d.age15||0}"></td></tr>
                   <tr><td>Usia 25-34 tahun</td><td><input type="number" id="${prefix}_age_25" value="${d.age25||0}"></td></tr>
                   <tr><td>Usia 35-44 tahun</td><td><input type="number" id="${prefix}_age_35" value="${d.age35||0}"></td></tr>
                   <tr><td>Usia 45-54 tahun</td><td><input type="number" id="${prefix}_age_45" value="${d.age45||0}"></td></tr>
-                  <tr><td>Usia &gt; 55 tahun</td><td><input type="number" id="${prefix}_age_55" value="${d.age55||0}"></td></tr>
+                  <tr><td>Usia > 55 Tahun tahun</td><td><input type="number" id="${prefix}_age_55" value="${d.age55||0}"></td></tr>
                 </tbody>
               </table>
             </div>
@@ -1243,6 +1277,11 @@
     }
   }
 
+  // Mengambil nilai gambar (logo/foto) yang akan disimpan:
+  // 1) Kalau user baru saja upload file baru -> pakai itu (dari imageCache).
+  // 2) Kalau TIDAK upload ulang -> pakai gambar lama yang masih tampil di
+  //    preview (dibaca dari atribut src elemen <img>-nya), bukan dianggap kosong.
+  // Ini mencegah foto/logo lama hilang setiap kali project diupdate.
   function getImageValue(imgId){
     if(imageCache[imgId]) return imageCache[imgId];
     const el = document.getElementById(imgId);
@@ -1258,7 +1297,6 @@
     tbody.appendChild(tr);
     recalcLockedScores(prefix);
   }
-
   function removeRow(btn) {
     const tbody = btn.parentNode.parentNode.parentNode;
     const table = btn.closest('table');
@@ -1342,6 +1380,9 @@
     const kpis = readTable(tableId(prefix,'tableKpi'), ['kpi_name','kpi_target','kpi_real','kpi_unit']);
     const curveS = readTable(tableId(prefix,'tableCurveS'), ['curve_month','curve_p','curve_a']);
     return {
+      // ID Mipro: field baru, tidak wajib. Project lama (12 project yang sudah
+      // ada) tetap aman tersimpan walau field ini kosong -- tinggal dibuka lewat
+      // Update lalu diisi ID Mipro-nya kalau perlu, lalu disave seperti biasa.
       miproId: getVal(prefix,'mipro_id').trim(),
       nama: getVal(prefix,'project_name').trim(),
       donatur: getVal(prefix,'donor').trim(),
@@ -1353,8 +1394,15 @@
       startDate: getVal(prefix,'start_date'),
       endDate: getVal(prefix,'end_date'),
       reportPeriod: getVal(prefix,'report_period'),
+      // Nilai isian capaian project (%) sekarang dikunci (readonly) di form.
+      // Diambil otomatis dari Realisasi Aktual Akumulatif pada baris Kurva S paling terbaru.
       progress: Math.min(100, Math.max(0, computeCapaianProject({curveS}))),
+      // Capaian KPI (%) juga dikunci (readonly) di form.
+      // Diambil dari rata-rata perbandingan Target vs Realisasi di tabel KPI Logframe.
       capaianKpi: computeCapaianKpi({kpis}),
+      // "Nama monev" tidak lagi punya kolom input sendiri (sudah dihapus).
+      // Nilainya sekarang otomatis mengikuti isian Project Manager (PM),
+      // sehingga laporan dan filter "nama monev" ikut memakai nama PM.
       monevCategory: getVal(prefix,'pm').trim() || 'Non-Monev',
       catatan: getVal(prefix,'catatan').trim(),
       curveNote: getVal(prefix,'curve_note').trim(),
@@ -1372,18 +1420,14 @@
         female: Number(getVal(prefix,'gen_female'))||0,
         disYes: Number(getVal(prefix,'dis_yes'))||0,
         disNo: Number(getVal(prefix,'dis_no'))||0,
-        bs: Number(getVal(prefix,'edu_belum sekolah'))||0,
         sd: Number(getVal(prefix,'edu_sd'))||0,
         smp: Number(getVal(prefix,'edu_smp'))||0,
         sma: Number(getVal(prefix,'edu_sma'))||0,
         pt: Number(getVal(prefix,'edu_pt'))||0,
-        age5: Number(getVal(prefix,'age_5'))||0,
-        age6: Number(getVal(prefix,'age_6'))||0,
         age15: Number(getVal(prefix,'age_15'))||0,
         age25: Number(getVal(prefix,'age_25'))||0,
         age35: Number(getVal(prefix,'age_35'))||0,
-        age45: Number(getVal(prefix,'age_45'))||0,
-        age55: Number(getVal(prefix,'age_55'))||0
+        age45: Number(getVal(prefix,'age_45'))||0
       },
 
       logos: {
@@ -1398,7 +1442,7 @@
   }
 
   /* ============ HALAMAN INPUT PROJECT BARU ============ */
-  function renderInputForm(){
+ function renderInputForm(){
     clearImageCacheForPrefix('in');
     document.getElementById('inputFormMount').innerHTML = buildMealForm('in', {}, 'new');
   }
@@ -1407,7 +1451,7 @@
     renderInputForm();
   }
 
-  async function saveNewProject(prefix){
+ async function saveNewProject(prefix){
     const formData = collectFormData(prefix);
     if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
 
@@ -1424,12 +1468,13 @@
 
     projects.push(newProject);
     save();
-    alert('project berhasil disimpan');
+    alert('Laporan berhasil disimpan.');
     renderInputForm();
     showPage('running');
+ 
   }
 
-  /* ============ HALAMAN UPDATE PROJECT ============ */
+  /* ============ HALAMAN UPDATE PROJECT (form lengkap) ============ */
   function openUpdatePage(id){
     if(!isAdmin){ openLoginModal(); return; }
     activeProjectId = id;
@@ -1453,6 +1498,10 @@
     const formData = collectFormData(prefix);
     if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
 
+    // Normalisasi ke "YYYY-MM" (tanpa tanggal) supaya konsisten -- baik untuk
+    // data lama yang formatnya "YYYY-MM" maupun data baru "YYYY-MM-DD" dari
+    // kalender penuh, sehingga tidak muncul entri riwayat ganda/tidak sinkron
+    // untuk bulan yang sama.
     const rawPeriod = formData.reportPeriod || new Date().toISOString().slice(0,10);
     const bulanIni = rawPeriod.slice(0,7);
     p.history = p.history || [];
@@ -1463,11 +1512,12 @@
 
     Object.assign(p, formData, { history: p.history, lastUpdatedAt: new Date().toISOString() });
 
+    // INI BAGIAN YANG SEBELUMNYA HILANG: menulis hasil update ke Firestore.
     const ok = await syncProjectToFirestore(p);
-    if(!ok) return;
+    if(!ok) return; // jangan tutup form kalau gagal simpan ke database (popup gagal sudah ditampilkan di syncProjectToFirestore)
 
     save();
-    alert('project berhasil disimpan');
+    alert('Laporan berhasil disimpan.');
     document.getElementById('navUpdate').style.display = 'none';
     showPage('running');
   }
@@ -1475,369 +1525,254 @@
   /* ============ HALAMAN LAPORAN (output MEAL) ============ */
   function goBackFromReport(){
     document.getElementById('navReport').style.display = 'none';
-    const p = projects.find(x=>x.id===reportProjectId);
-    showPage(p && p.finished ? 'finish' : 'running');
+    showPage(reportProjectId && projects.find(p=>p.id===reportProjectId && p.finished) ? 'finish' : 'running');
+  }
+
+  function createPieChartSvg(title, total, segments) {
+    if(!total || total <= 0){
+      return `
+        <div class="pie-container">
+          <div class="pie-title">${title}</div>
+          <div class="pie-svg-wrapper" style="display:flex; align-items:center; justify-content:center;">
+            <div class="pie-empty-note">Data masih dalam<br>pengumpulan dan<br>pengolahan</div>
+          </div>
+        </div>
+      `;
+    }
+    let accumulatedPercent = 0; let svgPaths = '';
+    // Jika hanya SATU kategori yang punya isian (persentasenya jadi 100%),
+    // rumus arc SVG biasa akan gagal digambar karena titik awal & titik akhir
+    // lengkungnya jadi sama persis (0deg = 360deg) — hasilnya lingkaran kosong/
+    // tidak terlihat sama sekali. Untuk kasus ini, gambar lingkaran penuh langsung.
+    const filledSegments = segments.filter(seg => total > 0 && (seg.val / total) * 100 > 0);
+    if(filledSegments.length === 1){
+      svgPaths += `<circle cx="50" cy="50" r="40" fill="${filledSegments[0].color}" stroke="#78716c" stroke-width="1"></circle>`;
+    } else {
+      segments.forEach(seg => {
+        const pct = total > 0 ? (seg.val / total) * 100 : 0; if (pct <= 0) return;
+        const startAngle = (accumulatedPercent / 100) * 360; accumulatedPercent += pct;
+        const endAngle = (accumulatedPercent / 100) * 360;
+        const x1 = 50 + 40 * Math.cos((startAngle - 90) * Math.PI / 180);
+        const y1 = 50 + 40 * Math.sin((startAngle - 90) * Math.PI / 180);
+        const x2 = 50 + 40 * Math.cos((endAngle - 90) * Math.PI / 180);
+        const y2 = 50 + 40 * Math.sin((endAngle - 90) * Math.PI / 180);
+        const largeArcFlag = pct > 50 ? 1 : 0;
+        svgPaths += `<path d="M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArcFlag} 1 ${x2} ${y2} Z" fill="${seg.color}" stroke="#78716c" stroke-width="1"></path>`;
+      });
+    }
+    svgPaths += `<circle cx="50" cy="50" r="24" fill="#ffffff"></circle>`;
+
+    let legendHtml = '';
+    segments.forEach(seg => {
+      const p = total > 0 ? ((seg.val / total) * 100).toFixed(1) : 0;
+      legendHtml += `<div class="legend-item"><span><span class="legend-dot" style="background:${seg.color}"></span>${seg.label}</span><strong>${seg.val} (${p}%)</strong></div>`;
+    });
+
+    return `
+      <div class="pie-container">
+        <div class="pie-title">${title}</div>
+        <div class="pie-svg-wrapper">
+          <svg viewBox="0 0 100 100" width="90" height="90">${svgPaths}</svg>
+          <div class="pie-center-text">TTL<br>${total}</div>
+        </div>
+        <div class="pie-legends">${legendHtml}</div>
+      </div>
+    `;
+  }
+
+  function bulanName(code){
+    const map = {Jan:'Januari',Feb:'Februari',Mar:'Maret',Apr:'April',Mei:'Mei',Jun:'Juni',Jul:'Juli',Agu:'Agustus',Sep:'September',Okt:'Oktober',Nov:'November',Des:'Desember'};
+    return map[code] || code;
   }
 
   function openReport(id){
     const p = projects.find(x=>x.id===id);
     if(!p) return;
     reportProjectId = id;
-    renderReport(p);
     document.getElementById('navReport').style.display = 'inline-block';
     showPage('report');
+    renderReport(p);
   }
 
   function renderReport(p){
-    document.getElementById('view_project_title').textContent = (p.nama || 'NAMA PROYEK').toUpperCase();
-    document.getElementById('view_project_score').textContent = 'TOTAL CAPAIAN PEKERJAAN PROJECT: ' + getProjectProgress(p).toFixed(1) + '%';
+    document.getElementById('view_project_title').innerText = p.nama || '-';
+    document.getElementById('view_box_project_name').innerText = p.nama || '-';
+    document.getElementById('view_project_score').innerText = `TOTAL CAPAIAN PEKERJAAN PROJECT: ${getProjectProgress(p).toFixed(1)}%`;
 
-    // Logos
     const rzContainer = document.getElementById('container_logo_rz_out');
-    const mitraContainer = document.getElementById('container_logo_mitra_out');
-    if(p.logos && p.logos.rz){
-      rzContainer.innerHTML = `<img src="${p.logos.rz}" class="dash-logo-img">`;
-    } else {
-      rzContainer.innerHTML = `<span class="dash-logo-placeholder">Logo lembaga</span>`;
-    }
-    if(p.logos && p.logos.mitra){
-      mitraContainer.innerHTML = `<img src="${p.logos.mitra}" class="dash-logo-img">`;
-    } else {
-      mitraContainer.innerHTML = `<span class="dash-logo-placeholder">Mitra</span>`;
-    }
+    rzContainer.innerHTML = p.logos && p.logos.rz ? `<img src="${p.logos.rz}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Logo lembaga</span>`;
+    const mtContainer = document.getElementById('container_logo_mitra_out');
+    mtContainer.innerHTML = p.logos && p.logos.mitra ? `<img src="${p.logos.mitra}" class="dash-logo-img">` : `<span class="dash-logo-placeholder">Mitra</span>`;
 
-    // Meta Grid
-    document.getElementById('view_box_project_name').textContent = p.nama || '-';
-    document.getElementById('view_donor').textContent = p.donatur || '-';
-    document.getElementById('view_project_value').textContent = p.projectValueText || (p.target ? fmtRupiah(p.target) : '-');
-    document.getElementById('view_project_duration').textContent = (p.startDate ? fmtTanggal(p.startDate) : '-') + ' s/d ' + (p.endDate ? fmtTanggal(p.endDate) : '-');
-    document.getElementById('view_report_period').textContent = p.reportPeriod ? (p.reportPeriod.length > 7 ? fmtTanggal(p.reportPeriod) : fmtBulan(p.reportPeriod)) : '-';
-    document.getElementById('view_location').textContent = p.lokasi || '-';
-    document.getElementById('view_pm').textContent = p.pm || '-';
-    document.getElementById('view_capaian_kpi').textContent = computeCapaianKpi(p).toFixed(1) + '%';
+    document.getElementById('view_project_value').innerText = formatRupiahInputValue(p.projectValueText) || fmtRupiah(p.target) || '-';
+    document.getElementById('view_donor').innerText = p.donatur || '-';
+    document.getElementById('view_location').innerText = p.lokasi || '-';
+    document.getElementById('view_pm').innerText = p.pm || '-';
+    document.getElementById('view_capaian_kpi').innerText = computeCapaianKpi(p).toFixed(1) + '%';
+    document.getElementById('view_project_duration').innerText = (p.startDate ? fmtTanggal(p.startDate) : '-') + ' s/d ' + (p.endDate ? fmtTanggal(p.endDate) : '-');
+    document.getElementById('view_report_period').innerText = p.reportPeriod ? fmtBulan(p.reportPeriod) : '-';
 
-    // 1. Activities Table
-    const actTbody = document.querySelector('#view_table_act tbody');
-    const acts = p.activities || [];
-    if(!acts.length){
-      actTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8a8378;">Belum ada data aktivitas.</td></tr>';
-    } else {
-      actTbody.innerHTML = acts.map(a=>`
-        <tr>
-          <td>${esc(a.act_name||'-')}</td>
-          <td style="text-align:center;">${esc(a.act_prog||'0')}%</td>
-          <td style="text-align:center;"><span class="badge-status ${a.act_status==='Selesai'?'bg-selesai':'bg-ontrack'}">${esc(a.act_status||'On Track')}</span></td>
-        </tr>
-      `).join('');
-    }
+    const lastUpdateDate = p.lastUpdatedAt ? fmtTanggal(p.lastUpdatedAt) : '-';
+    const lokasiText = p.lokasi || '-';
+    document.getElementById('view_footer_locdate').innerText = `${lokasiText}, ${lastUpdateDate}`;
+    document.getElementById('view_footer_pm_name').innerText = p.pm || '-';
+    document.getElementById('view_footer_pm_role').innerText = 'Project Advisor';
 
-    // 2. KPI Table
-    const kpiAvg = computeCapaianKpi(p);
-    document.getElementById('view_kpi_summary_percentage').textContent = 'RATA-RATA EFEKTIVITAS SASARAN KPI: ' + kpiAvg.toFixed(1) + '%';
-    const kpiTbody = document.querySelector('#view_table_kpi tbody');
-    const kpis = p.kpis || [];
-    if(!kpis.length){
-      kpiTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#8a8378;">Belum ada data KPI.</td></tr>';
-    } else {
-      kpiTbody.innerHTML = kpis.map(k=>{
-        const t = parseFloat(k.kpi_target) || 0;
-        const r = parseFloat(k.kpi_real) || 0;
-        const ef = t > 0 ? ((r/t)*100).toFixed(1) : '0.0';
-        return `
-          <tr>
-            <td>${esc(k.kpi_name||'-')}</td>
-            <td style="text-align:center;">${esc(k.kpi_target||'0')} ${esc(k.kpi_unit||'')}</td>
-            <td style="text-align:center;">${esc(k.kpi_real||'0')} ${esc(k.kpi_unit||'')}</td>
-            <td style="text-align:center; font-weight:bold;">${ef}%</td>
-          </tr>
-        `;
-      }).join('');
-    }
+    const actBody = document.getElementById('view_table_act').querySelector('tbody');
+    actBody.innerHTML = (p.activities||[]).map(r=>{
+      const cls = r.act_status === 'Selesai' ? 'bg-selesai' : 'bg-ontrack';
+      return `<td><strong>${r.act_name||'-'}</strong></td><td>${r.act_prog||0}%</td><td><span class="badge-status ${cls}">${r.act_status||'-'}</span></td>`;
+    }).map(html=>`<tr>${html}</tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
 
-    // 3. Demographics
-    renderPieCharts(p.demografi);
+    let sumPct = 0, countKpi = 0;
+    const kpiBody = document.getElementById('view_table_kpi').querySelector('tbody');
+    kpiBody.innerHTML = (p.kpis||[]).map(r=>{
+      const t = parseFloat(r.kpi_target)||1;
+      const real = parseFloat(r.kpi_real)||0;
+      const pct = ((real/t)*100).toFixed(1);
+      sumPct += parseFloat(pct); countKpi++;
+      return `<tr><td>${r.kpi_name||'-'}</td><td>${r.kpi_target||0} ${r.kpi_unit||''}</td><td><strong>${r.kpi_real||0} ${r.kpi_unit||''}</strong></td><td><strong>${pct}%</strong></td></tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+    document.getElementById('view_kpi_summary_percentage').innerText = `RATA-RATA EFEKTIVITAS SASARAN KPI: ${(countKpi>0 ? (sumPct/countKpi) : 0).toFixed(1)}%`;
 
-    // 4. Kurva S
-    renderCurveS(p.curveS, p.curveNote);
+    const d = p.demografi || {};
+    const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
+    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.bs+d.sd+d.smp+d.sma+d.pt), [{label:'belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age5+d.age6+d.age15+d.age25+d.age35+d.age45+d.age55), [{label:'< 5', val:d.age5||0, color:'#b45309'}, {label:'6-4', val:d.age6||0, color:'#d97706'}, {label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}, {label:'> 55', val:d.age55||0, color:'#fb923c'}]);
 
-    // 5. Schedule Table
-    const schTbody = document.querySelector('#view_table_sch tbody');
-    const schs = p.schedule || [];
-    if(!schs.length){
-      schTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8a8378;">Belum ada jadwal kegiatan terdekat.</td></tr>';
-    } else {
-      schTbody.innerHTML = schs.map(s=>`
-        <tr>
-          <td>${esc(s.sch_name||'-')}</td>
-          <td style="text-align:center;">${esc(s.sch_date||'-')}</td>
-          <td>${esc(s.sch_desc||'-')}</td>
-        </tr>
-      `).join('');
-    }
+    const curveRows = p.curveS || [];
+    const summaryBody = document.getElementById('view_table_curves_summary').querySelector('tbody');
+    summaryBody.innerHTML = '';
+    let svgPointsPlan = '', svgPointsAct = '', svgElementsGroup = '';
+    let xInterval = 400 / (curveRows.length > 1 ? curveRows.length - 1 : 1);
 
-    // 6. Challenges Table
-    const chTbody = document.querySelector('#view_table_challenges tbody');
-    const chs = p.challenges || [];
-    if(!chs.length){
-      chTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#8a8378;">Belum ada kendala / tantangan dicatat.</td></tr>';
-    } else {
-      chTbody.innerHTML = chs.map(c=>{
-        let badgeImpact = 'badge-info';
-        if(c.ch_impact==='Tinggi'||c.ch_impact==='Besar') badgeImpact = 'badge-danger';
-        else if(c.ch_impact==='Sedang') badgeImpact = 'badge-warning';
+    svgElementsGroup += `
+      <line x1="40" y1="30" x2="450" y2="30" stroke="#fee2e2" stroke-dasharray="2"></line>
+      <line x1="40" y1="80" x2="450" y2="80" stroke="#fed7aa" stroke-dasharray="2"></line>
+      <line x1="40" y1="130" x2="450" y2="130" stroke="#f97316" stroke-width="1.2"></line>
+    `;
 
-        return `
-          <tr>
-            <td>${esc(c.ch_risk||'-')}</td>
-            <td style="text-align:center;"><span class="${badgeImpact}">${esc(c.ch_impact||'-')}</span></td>
-            <td>${esc(c.ch_mitigation||'-')}</td>
-            <td style="text-align:center;"><span class="badge-status ${c.ch_status==='Closed'?'bg-closed':'bg-open'}">${esc(c.ch_status||'Open')}</span></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // 7. Lessons Table
-    const lsTbody = document.querySelector('#view_table_lessons tbody');
-    const lss = p.lessons || [];
-    if(!lss.length){
-      lsTbody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#8a8378;">Belum ada lesson learned.</td></tr>';
-    } else {
-      lsTbody.innerHTML = lss.map(l=>`
-        <tr>
-          <td>${esc(l.ls_main||'-')}</td>
-          <td>${esc(l.ls_rec||'-')}</td>
-        </tr>
-      `).join('');
-    }
-
-    // 8. Stakeholders Table
-    const shTbody = document.querySelector('#view_table_sh tbody');
-    const shs = p.stakeholders || [];
-    if(!shs.length){
-      shTbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8a8378;">Belum ada stakeholder terdaftar.</td></tr>';
-    } else {
-      shTbody.innerHTML = shs.map(s=>`
-        <tr>
-          <td>${esc(s.sh_name||'-')}</td>
-          <td>${esc(s.sh_role||'-')}</td>
-          <td>${esc(s.sh_act||'-')}</td>
-        </tr>
-      `).join('');
-    }
-
-    // 9. Catatan
-    const cardCatatan = document.getElementById('card_catatan');
-    const viewCatatan = document.getElementById('view_catatan');
-    if(p.catatan && p.catatan.trim() !== ''){
-      cardCatatan.style.display = 'block';
-      viewCatatan.textContent = p.catatan;
-    } else {
-      cardCatatan.style.display = 'none';
-    }
-
-    // 10. Photos
-    const photoGrid = document.getElementById('view_photo_grid');
-    const photos = (p.photos || []).filter(ph=>ph && ph.data);
-    if(!photos.length){
-      photoGrid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#8a8378; padding:15px; font-size:11px;">Belum ada dokumentasi foto.</div>';
-    } else {
-      photoGrid.innerHTML = photos.map(ph=>`
-        <div class="photo-out-item">
-          <img src="${ph.data}" class="photo-out-img">
-          <span class="photo-out-lbl">${esc(ph.label||'Dokumentasi Proyek')}</span>
-        </div>
-      `).join('');
-    }
-
-    // Footer
-    document.getElementById('view_footer_locdate').textContent = (p.lokasi ? p.lokasi + ', ' : '') + fmtTanggal(p.reportPeriod || new Date());
-    document.getElementById('view_footer_pm_name').textContent = p.pm || '-';
-  }
-
-  /* ============ HELPER DEMOGRAFI (PIE CHARTS) ============ */
-  function createSvgDonut(items, total) {
-    if(!total || total === 0) {
-      return `<div class="pie-svg-wrapper"><svg viewBox="0 0 36 36" style="width:100%;height:100%;"><circle cx="18" cy="18" r="15.915" fill="none" stroke="#e2e8f0" stroke-width="3.8"/></svg><div class="pie-center-text">0</div></div>`;
-    }
-    let cumulativePercent = 0;
-    const slices = items.map(item => {
-      const percent = (item.value / total) * 100;
-      const strokeDasharray = `${percent} ${100 - percent}`;
-      const strokeDashoffset = 100 - cumulativePercent + 25;
-      cumulativePercent += percent;
-      return `<circle cx="18" cy="18" r="15.915" fill="none" stroke="${item.color}" stroke-width="3.8" stroke-dasharray="${strokeDasharray}" stroke-dashoffset="${strokeDashoffset}"></circle>`;
-    }).join('');
-    return `<div class="pie-svg-wrapper"><svg viewBox="0 0 36 36" style="width:100%;height:100%;">${slices}</svg><div class="pie-center-text">${total.toLocaleString('id-ID')}</div></div>`;
-  }
-
-  function renderPieCharts(d){
-    d = d || {};
-    const root = document.getElementById('view_pie_root');
-
-    const male = Number(d.male)||0, female = Number(d.female)||0;
-    const totGender = male + female;
-    const genderItems = [
-      { label: 'Laki-laki', value: male, color: '#3b82f6' },
-      { label: 'Perempuan', value: female, color: '#ec4899' }
-    ];
-
-    const disYes = Number(d.disYes)||0, disNo = Number(d.disNo)||0;
-    const totDis = disYes + disNo;
-    const disItems = [
-      { label: 'Disabilitas', value: disYes, color: '#f59e0b' },
-      { label: 'Non-Disabilitas', value: disNo, color: '#10b981' }
-    ];
-
-    const bs = Number(d.bs)||0, sd = Number(d.sd)||0, smp = Number(d.smp)||0, sma = Number(d.sma)||0, pt = Number(d.pt)||0;
-    const totEdu = bs + sd + smp + sma + pt;
-    const eduItems = [
-      { label: 'Belum Sekolah', value: bs, color: '#94a3b8' },
-      { label: 'SD', value: sd, color: '#3b82f6' },
-      { label: 'SMP', value: smp, color: '#f59e0b' },
-      { label: 'SMA', value: sma, color: '#10b981' },
-      { label: 'PT', value: pt, color: '#8b5cf6' }
-    ];
-
-    const a5 = Number(d.age5)||0, a6 = Number(d.age6)||0, a15 = Number(d.age15)||0, a25 = Number(d.age25)||0, a35 = Number(d.age35)||0, a45 = Number(d.age45)||0, a55 = Number(d.age55)||0;
-    const totAge = a5 + a6 + a15 + a25 + a35 + a45 + a55;
-    const ageItems = [
-      { label: '<5 Thn', value: a5, color: '#ef4444' },
-      { label: '6-14 Thn', value: a6, color: '#f97316' },
-      { label: '15-24 Thn', value: a15, color: '#eab308' },
-      { label: '25-34 Thn', value: a25, color: '#10b981' },
-      { label: '35-44 Thn', value: a35, color: '#06b6d4' },
-      { label: '45-54 Thn', value: a45, color: '#3b82f6' },
-      { label: '>55 Thn', value: a55, color: '#8b5cf6' }
-    ];
-
-    function buildPieCard(title, items, total){
-      return `
-        <div class="pie-container">
-          <div class="pie-title">${title}</div>
-          ${createSvgDonut(items.filter(i=>i.value>0), total)}
-          <div class="pie-legends">
-            ${items.map(i=>`
-              <div class="legend-item">
-                <span><span class="legend-dot" style="background:${i.color}"></span>${i.label}</span>
-                <strong>${i.value}</strong>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    root.innerHTML = 
-      buildPieCard('Jenis Kelamin', genderItems, totGender) +
-      buildPieCard('Disabilitas', disItems, totDis) +
-      buildPieCard('Pendidikan', eduItems, totEdu) +
-      buildPieCard('Kelompok Usia', ageItems, totAge);
-  }
-
-  /* ============ HELPER KURVA S ============ */
-  function bulanName(val){
-    const m = {Jan:'Januari',Feb:'Februari',Mar:'Maret',Apr:'April',Mei:'Mei',Jun:'Juni',Jul:'Juli',Agu:'Agustus',Sep:'September',Okt:'Oktober',Nov:'November',Des:'Desember'};
-    return m[val] || val || '-';
-  }
-
-  function renderCurveS(curveS, curveNote){
-    curveS = curveS || [];
-    const tbody = document.querySelector('#view_table_curves_summary tbody');
-    if(!curveS.length){
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#8a8378;">Belum ada data Kurva S.</td></tr>';
-    } else {
-      tbody.innerHTML = curveS.map(c=>`
-        <tr>
-          <td>${bulanName(c.curve_month)}</td>
-          <td style="text-align:center;">${c.curve_p !== undefined && c.curve_p !== '' ? c.curve_p + '%' : '-'}</td>
-          <td style="text-align:center; font-weight:bold; color:#2563eb;">${c.curve_a !== undefined && c.curve_a !== '' ? c.curve_a + '%' : '-'}</td>
-        </tr>
-      `).join('');
-    }
-
-    const fnEl = document.getElementById('view_curve_footnote');
-    const noteText = curveNote !== undefined ? curveNote : computeCurveAutoNote(curveS);
-    if(noteText && noteText.trim() !== ''){
-      fnEl.style.display = 'block';
-      fnEl.innerHTML = `<strong>Catatan/Analisis Kurva S:</strong> ${esc(noteText)}`;
-    } else {
-      fnEl.style.display = 'none';
-      fnEl.innerHTML = '';
-    }
-
-    const svg = document.getElementById('svg_curve_s');
-    if(!curveS.length){
-      svg.innerHTML = '<text x="240" y="90" text-anchor="middle" fill="#94a3b8" font-size="12">Belum ada data Kurva S</text>';
-      return;
-    }
-
-    const margin = { top: 20, right: 30, bottom: 30, left: 40 };
-    const width = 480 - margin.left - margin.right;
-    const height = 180 - margin.top - margin.bottom;
-
-    const count = curveS.length;
-    const dx = count > 1 ? width / (count - 1) : width;
-
-    let pathTarget = '', pathActual = '';
-    let targetPoints = [], actualPoints = [];
-
-    curveS.forEach((item, i)=>{
-      const x = margin.left + (count > 1 ? i * dx : width / 2);
-      const tp = parseFloat(item.curve_p) || 0;
-      const yp = margin.top + height - (tp / 100) * height;
-      targetPoints.push({x, y: yp, val: tp, month: bulanName(item.curve_month)});
-
-      if(item.curve_a !== undefined && item.curve_a !== null && String(item.curve_a).trim() !== ''){
-        const ta = parseFloat(item.curve_a) || 0;
-        const ya = margin.top + height - (ta / 100) * height;
-        actualPoints.push({x, y: ya, val: ta, month: bulanName(item.curve_month)});
+    curveRows.forEach((row, idx)=>{
+      const mName = bulanName(row.curve_month);
+      // Sumbu X grafik cukup pakai 3 huruf pertama bulan (Jan, Feb, dst),
+      // sedangkan tabel ringkasan di bawah tetap pakai nama bulan lengkap.
+      const mShort = (row.curve_month || '').slice(0, 3);
+      const pVal = parseFloat(row.curve_p)||0;
+      // Realisasi dianggap "terisi" hanya jika benar-benar ada isian (bukan kosong),
+      // supaya bulan yang belum diisi realisasinya tidak dianggap 0.
+      const hasAct = row.curve_a !== undefined && row.curve_a !== null && String(row.curve_a).trim() !== '';
+      const aVal = hasAct ? (parseFloat(row.curve_a)||0) : null;
+      summaryBody.innerHTML += `<tr><td><strong>${mName}</strong></td><td>${pVal.toFixed(1)}%</td><td><strong>${hasAct ? aVal.toFixed(1)+'%' : '-'}</strong></td></tr>`;
+      let x = 40 + (idx * xInterval);
+      let yPlan = 130 - (pVal * 1.0);
+      svgPointsPlan += `${x},${yPlan} `;
+      svgElementsGroup += `<text x="${x}" y="152" fill="#475569" font-size="10" font-weight="600" text-anchor="middle">${mShort}</text>`;
+      svgElementsGroup += `<circle cx="${x}" cy="${yPlan}" r="4" fill="#ea580c"></circle><text x="${x}" y="${yPlan-8}" fill="#c2410c" font-size="9" font-weight="bold" text-anchor="middle">${pVal.toFixed(1)}%</text>`;
+      // Titik & garis realisasi hanya digambar sampai bulan terakhir yang diisi.
+      // Bulan yang realisasinya masih kosong tidak ditarik ke 0 dan tidak memperpanjang garis.
+      if(hasAct){
+        let yAct = 130 - (aVal * 1.0);
+        svgPointsAct += `${x},${yAct} `;
+        svgElementsGroup += `<circle cx="${x}" cy="${yAct}" r="4" fill="#2563eb"></circle><text x="${x}" y="${yAct+12}" fill="#1d4ed8" font-size="9" font-weight="bold" text-anchor="middle">${aVal.toFixed(1)}%</text>`;
       }
     });
 
-    targetPoints.forEach((pt, i)=>{
-      pathTarget += (i === 0 ? `M ${pt.x} ${pt.y}` : ` L ${pt.x} ${pt.y}`);
-    });
-
-    actualPoints.forEach((pt, i)=>{
-      pathActual += (i === 0 ? `M ${pt.x} ${pt.y}` : ` L ${pt.x} ${pt.y}`);
-    });
-
-    let svgHtml = `
-      <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left + width}" y2="${margin.top}" stroke="#fed7aa" stroke-dasharray="2,2" />
-      <line x1="${margin.left}" y1="${margin.top + height/2}" x2="${margin.left + width}" y2="${margin.top + height/2}" stroke="#fed7aa" stroke-dasharray="2,2" />
-      <line x1="${margin.left}" y1="${margin.top + height}" x2="${margin.left + width}" y2="${margin.top + height}" stroke="#cbd5e1" />
-
-      <text x="${margin.left - 8}" y="${margin.top + 4}" text-anchor="end" fill="#94a3b8" font-size="9">100%</text>
-      <text x="${margin.left - 8}" y="${margin.top + height/2 + 3}" text-anchor="end" fill="#94a3b8" font-size="9">50%</text>
-      <text x="${margin.left - 8}" y="${margin.top + height + 3}" text-anchor="end" fill="#94a3b8" font-size="9">0%</text>
+    document.getElementById('svg_curve_s').innerHTML = svgElementsGroup + `
+      <polyline points="${svgPointsPlan}" fill="none" stroke="#ea580c" stroke-width="3.5"></polyline>
+      <polyline points="${svgPointsAct}" fill="none" stroke="#2563eb" stroke-width="3"></polyline>
     `;
 
-    if(pathTarget){
-      svgHtml += `<path d="${pathTarget}" fill="none" stroke="#ea580c" stroke-width="2.5" />`;
-      targetPoints.forEach(pt=>{
-        svgHtml += `<circle cx="${pt.x}" cy="${pt.y}" r="3.5" fill="#ea580c" />`;
-        svgHtml += `<text x="${pt.x}" y="${margin.top + height + 18}" text-anchor="middle" fill="#64748b" font-size="9">${pt.month.slice(0,3)}</text>`;
-      });
+    // Catatan kurva S: pakai isian manual (p.curveNote). Untuk project LAMA
+    // yang belum pernah punya field ini sama sekali (curveNote === undefined),
+    // tampilkan dulu catatan otomatis yang dulu biasa muncul, supaya tidak
+    // hilang tiba-tiba -- sampai admin membuka Update dan menyimpannya ulang.
+    const footnoteEl = document.getElementById('view_curve_footnote');
+    const curveNoteText = (p.curveNote !== undefined ? p.curveNote : computeCurveAutoNote(p.curveS||[])).trim();
+    if(curveNoteText){
+      footnoteEl.style.display = 'block';
+      footnoteEl.innerText = curveNoteText;
+    } else {
+      footnoteEl.style.display = 'none';
     }
 
-    if(pathActual){
-      svgHtml += `<path d="${pathActual}" fill="none" stroke="#2563eb" stroke-width="2.5" />`;
-      actualPoints.forEach(pt=>{
-        svgHtml += `<circle cx="${pt.x}" cy="${pt.y}" r="3.5" fill="#2563eb" />`;
-      });
+    const schBody = document.getElementById('view_table_sch').querySelector('tbody');
+    schBody.innerHTML = (p.schedule||[]).map(r=>`<tr><td><strong>${r.sch_name||'-'}</strong></td><td>${r.sch_date||'-'}</td><td>${r.sch_desc||'-'}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const chBody = document.getElementById('view_table_challenges').querySelector('tbody');
+    chBody.innerHTML = (p.challenges||[]).map(r=>{
+      let impBadge = 'badge-info'; if(r.ch_impact === 'Tinggi') impBadge='badge-warning'; if(r.ch_impact === 'Besar') impBadge='badge-danger';
+      const statClass = r.ch_status === 'Closed' ? 'bg-closed' : 'bg-open';
+      return `<tr><td><strong>${r.ch_risk||'-'}</strong></td><td><span class="${impBadge}">${r.ch_impact||'-'}</span></td><td>${r.ch_mitigation||'-'}</td><td><span class="badge-status ${statClass}">${r.ch_status||'-'}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const lsBody = document.getElementById('view_table_lessons').querySelector('tbody');
+    lsBody.innerHTML = (p.lessons||[]).map(r=>`<tr><td><strong>${r.ls_main||'-'}</strong></td><td>${r.ls_rec||'-'}</td></tr>`).join('') || '<tr><td colspan="2" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const shBody = document.getElementById('view_table_sh').querySelector('tbody');
+    shBody.innerHTML = (p.stakeholders||[]).map(r=>`<tr><td><strong>${r.sh_name||'-'}</strong></td><td>${r.sh_role||'-'}</td><td>${r.sh_act||'-'}</td></tr>`).join('') || '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">Tidak ada data</td></tr>';
+
+    const photoGridOut = document.getElementById('view_photo_grid'); photoGridOut.innerHTML = '';
+    (p.photos||[]).forEach((ph, i)=>{
+      if(ph.data) photoGridOut.innerHTML += `<div class="photo-out-item"><img src="${ph.data}" class="photo-out-img"><span class="photo-out-lbl">${ph.label || ('Foto '+(i+1))}</span></div>`;
+    });
+    if(photoGridOut.innerHTML === '') photoGridOut.innerHTML = '<div style="grid-column:span 3; text-align:center; padding:15px; font-size:11px; color:#a8a29e;">Tidak ada dokumentasi foto kerja lapangan yang diunggah.</div>';
+
+    // Kartu "Catatan" hanya ditampilkan kalau ada isinya. Kalau kosong,
+    // kartu disembunyikan total dan nomor section sesudahnya otomatis maju
+    // (tidak ada nomor yang loncat), lihat renumberReportSections() di bawah.
+    const catatanText = (p.catatan || '').trim();
+    const catatanCard = document.getElementById('card_catatan');
+    if(catatanText){
+      catatanCard.style.display = '';
+      document.getElementById('view_catatan').innerText = catatanText;
+    }else{
+      catatanCard.style.display = 'none';
     }
 
-    svg.innerHTML = svgHtml;
+    // Section "Kendala & tantangan" dan "Pembelajaran (lesson learned)" hanya
+    // ditampilkan kalau benar-benar ada isinya. Kalau kosong, card-nya
+    // disembunyikan total dan nomor section sesudahnya otomatis maju.
+    const hasKendala = (p.challenges||[]).some(r => (r.ch_risk||'').trim() || (r.ch_mitigation||'').trim());
+    const hasLesson = (p.lessons||[]).some(r => (r.ls_main||'').trim() || (r.ls_rec||'').trim());
+    document.getElementById('card_kendala').style.display = hasKendala ? '' : 'none';
+    document.getElementById('card_lesson').style.display = hasLesson ? '' : 'none';
+
+    renumberReportSections({ showCatatan: !!catatanText, showKendala: hasKendala, showLesson: hasLesson });
   }
 
-  /* ============ INISIALISASI HALAMAN ============ */
-  window.addEventListener('DOMContentLoaded', ()=>{
-    applyAuthUI();
-    renderHome();
-    renderRunning();
-    renderFinish();
-  });
+  // Menomori ulang urutan section laporan (1, 2, 3, ...) secara dinamis.
+  // Section "Catatan", "Kendala & tantangan", dan "Pembelajaran (lesson learned)"
+  // hanya diikutsertakan dalam urutan kalau sedang terisi/tampil, sehingga
+  // section-section berikutnya tidak pernah menampilkan nomor yang bolong/loncat.
+  function renumberReportSections(opts){
+    const order = ['progres','kpi','demografi','kurva','jadwal'];
+    if(opts.showKendala) order.push('kendala');
+    if(opts.showLesson) order.push('lesson');
+    order.push('aliansi');
+    if(opts.showCatatan) order.push('catatan');
+    order.push('dokumentasi');
+    order.forEach((secId, idx)=>{
+      const el = document.querySelector(`.sec-num[data-sec-id="${secId}"]`);
+      if(el) el.textContent = idx + 1;
+    });
+  }
+
+  /* ============ INIT ============ */
+  applyAuthUI();
+  renderHome();
+  renderRunning();
+  renderFinish();
+  renderInputForm();
+
+  // Jaga-jaga: kalau firebase.js sudah lebih dulu siap sebelum baris ini
+  // dieksekusi (jarang terjadi tapi mungkin), langsung mulai sinkronisasi.
+  // Kasus normal: firebase.js akan memanggil window.initFirestoreSync()
+  // sendiri setelah koneksi berhasil (lihat firebase.js).
+  if(window.db){ initFirestoreSync(); }
 </script>
+
+ <script type="module" src="firebase.js"></script>
 </body>
 </html>
