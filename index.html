@@ -464,7 +464,17 @@
   const STORAGE_KEY = 'pm_projects_v2';
   // projects diisi sementara dari cache lokal (untuk render instan),
   // lalu akan ditimpa otomatis oleh data real-time dari Firestore lewat initFirestoreSync().
-  let projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  // PENTING: dibungkus try-catch -- di sebagian browser/pengaturan privasi,
+  // localStorage bisa ditolak aksesnya (throw error). Kalau baris ini gagal
+  // dan tidak ditangkap, SELURUH script di halaman berhenti jalan sejak titik
+  // ini, termasuk tombol Save yang jadi tidak merespons sama sekali.
+  let projects = [];
+  try{
+    projects = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  }catch(e){
+    console.error('localStorage tidak bisa diakses, lanjut tanpa cache lokal:', e);
+    projects = [];
+  }
   let activeProjectId = null;
   let reportProjectId = null;
   let isAdmin = false;
@@ -524,7 +534,13 @@
     });
   }
 
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
+  function save(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    }catch(e){
+      console.error('Gagal menyimpan cache lokal (localStorage), tapi data tetap tersimpan di database:', e);
+    }
+  }
 
   /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE ============ */
   // Dipanggil oleh firebase.js setelah koneksi Firestore siap.
@@ -1452,6 +1468,7 @@
   }
 
  async function saveNewProject(prefix){
+  try{
     const formData = collectFormData(prefix);
     if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
 
@@ -1471,6 +1488,12 @@
     alert('Laporan berhasil disimpan.');
     renderInputForm();
     showPage('running');
+  }catch(e){
+    // Jaring pengaman: error apapun yang tidak terduga tetap diberi tahu ke
+    // user lewat popup, supaya tombol Save tidak pernah terasa "diam saja".
+    console.error('Terjadi error saat menyimpan project baru:', e);
+    alert('Laporan tidak bisa disimpan karena ada kesalahan teknis.\n\nDetail: ' + e.message);
+  }
  
   }
 
@@ -1493,6 +1516,7 @@
   }
 
   async function updateExistingProject(prefix){
+   try{
     const p = projects.find(x=>x.id===activeProjectId);
     if(!p) return;
     const formData = collectFormData(prefix);
@@ -1520,6 +1544,12 @@
     alert('Laporan berhasil disimpan.');
     document.getElementById('navUpdate').style.display = 'none';
     showPage('running');
+   }catch(e){
+    // Jaring pengaman: error apapun yang tidak terduga tetap diberi tahu ke
+    // user lewat popup, supaya tombol Save update tidak pernah terasa "diam saja".
+    console.error('Terjadi error saat menyimpan update project:', e);
+    alert('Laporan tidak bisa disimpan karena ada kesalahan teknis.\n\nDetail: ' + e.message);
+   }
   }
 
   /* ============ HALAMAN LAPORAN (output MEAL) ============ */
