@@ -1468,6 +1468,7 @@
 
     projects.push(newProject);
     save();
+    alert('Laporan berhasil disimpan.');
     renderInputForm();
     showPage('running');
  
@@ -1518,7 +1519,7 @@
     save();
     alert('Laporan berhasil disimpan.');
     document.getElementById('navUpdate').style.display = 'none';
-    showPage(p.finished ? 'finish' : 'running');
+    showPage('running');
   }
 
   /* ============ HALAMAN LAPORAN (output MEAL) ============ */
