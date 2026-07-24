@@ -1110,6 +1110,7 @@
               <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan jenjang pendidikan</label>
               <table class="input-table">
                 <tbody>
+                  <tr><td>Siswa SD</td><td><input type="number" id="${prefix}_edu_belum sekolah" value="${d.bs||0}"></td></tr>
                   <tr><td>Siswa SD</td><td><input type="number" id="${prefix}_edu_sd" value="${d.sd||0}"></td></tr>
                   <tr><td>Siswa SMP</td><td><input type="number" id="${prefix}_edu_smp" value="${d.smp||0}"></td></tr>
                   <tr><td>Siswa SMA</td><td><input type="number" id="${prefix}_edu_sma" value="${d.sma||0}"></td></tr>
@@ -1599,7 +1600,7 @@
     const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
     pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
     pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
-    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.sd+d.smp+d.sma+d.pt), [{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", (d.bs+d.sd+d.smp+d.sma+d.pt), [{label:'belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
     pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age5+d.age6+d.age15+d.age25+d.age35+d.age45+d.age55), [{label:'< 5', val:d.age5||0, color:'#b45309'}, {label:'6-4', val:d.age6||0, color:'#d97706'}, {label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}, {label:'> 55', val:d.age55||0, color:'#fb923c'}]);
 
     const curveRows = p.curveS || [];
