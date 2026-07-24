@@ -381,7 +381,7 @@
           </table>
         </div>
 
-        <div class="dash-card">
+        <div class="dash-card" id="card_kendala">
           <div class="dash-card-title"><span class="sec-num" data-sec-id="kendala">6</span>. Matriks kendala &amp; tantangan utama lapangan</div>
           <table class="input-table" id="view_table_challenges" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Tantangan / risiko kritis</th><th style="width:12%;">Dampak</th><th>Mitigasi taktis lapangan</th><th style="width:12%;">Status</th></tr></thead>
@@ -389,7 +389,7 @@
           </table>
         </div>
 
-        <div class="dash-card">
+        <div class="dash-card" id="card_lesson">
           <div class="dash-card-title"><span class="sec-num" data-sec-id="lesson">7</span>. Pembelajaran teridentifikasi (lesson learned)</div>
           <table class="input-table" id="view_table_lessons" style="margin-top:0; font-size:11px;">
             <thead><tr><th>Pembelajaran utama kontekstual</th><th>Rekomendasi / rencana aksi strategis</th></tr></thead>
@@ -556,7 +556,7 @@
       return true;
     }catch(err){
       console.error('Gagal menyimpan ke database:', err);
-      alert('Gagal menyimpan ke database. Cek koneksi internet lalu coba lagi.\n\nDetail: ' + err.message);
+      alert('Laporan tidak bisa disimpan. Cek koneksi internet Anda lalu coba lagi.\n\nDetail: ' + err.message);
       return false;
     }
   }
@@ -583,10 +583,16 @@
     return 'Rp ' + parseInt(digits, 10).toLocaleString('id-ID');
   }
   function fmtBulan(ym){
-    if(!ym) return '-';
-    const [y,m] = ym.split('-');
+    if(!ym || typeof ym !== 'string') return '-';
+    // Nilai bisa berformat "YYYY-MM" (data lama) atau "YYYY-MM-DD" (data baru
+    // sejak field tanggal pakai kalender penuh) — keduanya ditangani di sini,
+    // dan kalau datanya rusak/tidak lengkap, tampilkan "-" bukan "undefined".
+    const parts = ym.split('-');
+    const y = parts[0];
+    const mi = parseInt(parts[1], 10);
     const bulanList = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    return bulanList[parseInt(m,10)-1] + ' ' + y;
+    if(!y || !mi || mi < 1 || mi > 12) return '-';
+    return bulanList[mi-1] + ' ' + y;
   }
   function fmtTanggal(d){
     if(!d) return '-';
@@ -677,6 +683,24 @@
       countKpi++;
     });
     return countKpi > 0 ? (sumPct / countKpi) : 0;
+  }
+
+  // Catatan kurva S kini diisi manual. Fungsi ini HANYA dipakai sebagai
+  // fallback untuk project LAMA yang belum pernah punya field "curveNote"
+  // (curveNote === undefined), supaya catatan otomatis yang dulu tampil
+  // tetap ada persis seperti sebelumnya sampai admin menggantinya secara manual.
+  function computeCurveAutoNote(curveS){
+    let absoluteGap = 0, lastMonthWithGap = '';
+    (curveS||[]).forEach(row=>{
+      const pVal = parseFloat(row.curve_p)||0;
+      const hasAct = row.curve_a !== undefined && row.curve_a !== null && String(row.curve_a).trim() !== '';
+      if(hasAct){
+        const aVal = parseFloat(row.curve_a)||0;
+        if(pVal > aVal){ absoluteGap = pVal - aVal; lastMonthWithGap = bulanName(row.curve_month); }
+      }
+    });
+    if(absoluteGap <= 0) return '';
+    return `Footnote analisis deviasi target vs aktual: teridentifikasi akumulasi deviasi negatif (gap) sebesar -${absoluteGap.toFixed(1)}% hingga periode bulan ${lastMonthWithGap}. Rekomendasi tindakan korektif: diperlukan percepatan mobilisasi logistik cadangan serta restrukturisasi alokasi tim guna mengejar deviasi target pada periode berikutnya.`;
   }
 
   function renderStats(){
@@ -792,7 +816,10 @@
         <tbody>
           ${list.map(p=>{
             const hist = p.history||[];
-            const last = hist.length ? hist[hist.length-1] : null;
+            // Ambil entri dengan nilai "bulan" TERBESAR (bukan asal elemen
+            // terakhir di array) -- lebih tahan terhadap data lama yang
+            // formatnya beda (YYYY-MM vs YYYY-MM-DD) atau belum sempat tersortir.
+            const last = hist.length ? hist.reduce((a,b)=> ((a.bulan||'') >= (b.bulan||'') ? a : b)) : null;
             return `
             <tr>
               <td><strong>${p.nama||'-'}</strong></td>
@@ -976,7 +1003,7 @@
   }
   function challengeRowHtml(prefix, v){
     v = v || {};
-    return `<td><input type="text" name="ch_risk" value="${v.ch_risk||''}"></td><td><select name="ch_impact"><option value="Sedang" ${v.ch_impact==='Sedang'?'selected':''}>Sedang</option><option value="Tinggi" ${v.ch_impact==='Tinggi'?'selected':''}>Tinggi</option><option value="Besar" ${v.ch_impact==='Besar'?'selected':''}>Besar</option></select></td><td><input type="text" name="ch_mitigation" value="${v.ch_mitigation||''}"></td><td><select name="ch_status"><option value="Open" ${v.ch_status==='Open'?'selected':''}>Open</option><option value="Closed" ${v.ch_status==='Closed'?'selected':''}>Closed</option></select></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
+    return `<td><input type="text" name="ch_risk" value="${v.ch_risk||''}"></td><td><select name="ch_impact"><option value="" ${!v.ch_impact?'selected':''}>- Pilih dampak -</option><option value="Sedang" ${v.ch_impact==='Sedang'?'selected':''}>Sedang</option><option value="Tinggi" ${v.ch_impact==='Tinggi'?'selected':''}>Tinggi</option><option value="Besar" ${v.ch_impact==='Besar'?'selected':''}>Besar</option></select></td><td><input type="text" name="ch_mitigation" value="${v.ch_mitigation||''}"></td><td><select name="ch_status"><option value="Open" ${v.ch_status==='Open'?'selected':''}>Open</option><option value="Closed" ${v.ch_status==='Closed'?'selected':''}>Closed</option></select></td><td><button type="button" class="meal-btn meal-btn-danger" onclick="removeRow(this)">Hapus</button></td>`;
   }
   function lessonRowHtml(prefix, v){
     v = v || {};
@@ -1144,6 +1171,10 @@
             <thead><tr><th>Bulan implementasi</th><th style="width:25%;">Target rencana akumulatif (%)</th><th style="width:25%;">Realisasi aktual akumulatif (%)</th><th style="width:10%;">Aksi</th></tr></thead>
             <tbody>${rowsHtml(prefix,'curve',data.curveS)}</tbody>
           </table>
+          <div class="form-group" style="margin-top:10px;">
+            <label>Catatan kurva S (opsional)</label>
+            <textarea id="${prefix}_curve_note" rows="3" placeholder="Tulis catatan/analisis terkait progres kurva S di sini (opsional)...">${esc(data.curveNote !== undefined ? data.curveNote : computeCurveAutoNote(data.curveS||[]))}</textarea>
+          </div>
         </div>
 
         <div class="form-section">
@@ -1374,6 +1405,7 @@
       // sehingga laporan dan filter "nama monev" ikut memakai nama PM.
       monevCategory: getVal(prefix,'pm').trim() || 'Non-Monev',
       catatan: getVal(prefix,'catatan').trim(),
+      curveNote: getVal(prefix,'curve_note').trim(),
 
       activities: readTable(tableId(prefix,'tableActivity'), ['act_name','act_prog','act_status']),
       kpis: kpis,
@@ -1465,20 +1497,26 @@
     const formData = collectFormData(prefix);
     if(!formData.nama){ alert('Nama proyek wajib diisi.'); return; }
 
-    const bulanIni = (formData.reportPeriod) || new Date().toISOString().slice(0,7);
+    // Normalisasi ke "YYYY-MM" (tanpa tanggal) supaya konsisten -- baik untuk
+    // data lama yang formatnya "YYYY-MM" maupun data baru "YYYY-MM-DD" dari
+    // kalender penuh, sehingga tidak muncul entri riwayat ganda/tidak sinkron
+    // untuk bulan yang sama.
+    const rawPeriod = formData.reportPeriod || new Date().toISOString().slice(0,10);
+    const bulanIni = rawPeriod.slice(0,7);
     p.history = p.history || [];
-    const idx = p.history.findIndex(h=>h.bulan===bulanIni);
+    const idx = p.history.findIndex(h => (h.bulan||'').slice(0,7) === bulanIni);
     const entry = { bulan: bulanIni, progress: formData.progress, catatan: 'Update data project melalui formulir lengkap.' };
     if(idx>=0) p.history[idx] = entry; else p.history.push(entry);
-    p.history.sort((a,b)=>a.bulan.localeCompare(b.bulan));
+    p.history.sort((a,b)=>(a.bulan||'').localeCompare(b.bulan||''));
 
     Object.assign(p, formData, { history: p.history, lastUpdatedAt: new Date().toISOString() });
 
     // INI BAGIAN YANG SEBELUMNYA HILANG: menulis hasil update ke Firestore.
     const ok = await syncProjectToFirestore(p);
-    if(!ok) return; // jangan tutup form kalau gagal simpan ke database
+    if(!ok) return; // jangan tutup form kalau gagal simpan ke database (popup gagal sudah ditampilkan di syncProjectToFirestore)
 
     save();
+    alert('Laporan berhasil disimpan.');
     document.getElementById('navUpdate').style.display = 'none';
     showPage(p.finished ? 'finish' : 'running');
   }
@@ -1608,7 +1646,6 @@
     summaryBody.innerHTML = '';
     let svgPointsPlan = '', svgPointsAct = '', svgElementsGroup = '';
     let xInterval = 400 / (curveRows.length > 1 ? curveRows.length - 1 : 1);
-    let absoluteGap = 0, lastMonthWithGap = '';
 
     svgElementsGroup += `
       <line x1="40" y1="30" x2="450" y2="30" stroke="#fee2e2" stroke-dasharray="2"></line>
@@ -1638,7 +1675,6 @@
         let yAct = 130 - (aVal * 1.0);
         svgPointsAct += `${x},${yAct} `;
         svgElementsGroup += `<circle cx="${x}" cy="${yAct}" r="4" fill="#2563eb"></circle><text x="${x}" y="${yAct+12}" fill="#1d4ed8" font-size="9" font-weight="bold" text-anchor="middle">${aVal.toFixed(1)}%</text>`;
-        if(pVal > aVal){ absoluteGap = pVal - aVal; lastMonthWithGap = mName; }
       }
     });
 
@@ -1647,10 +1683,15 @@
       <polyline points="${svgPointsAct}" fill="none" stroke="#2563eb" stroke-width="3"></polyline>
     `;
 
+    // Catatan kurva S: pakai isian manual (p.curveNote). Untuk project LAMA
+    // yang belum pernah punya field ini sama sekali (curveNote === undefined),
+    // tampilkan dulu catatan otomatis yang dulu biasa muncul, supaya tidak
+    // hilang tiba-tiba -- sampai admin membuka Update dan menyimpannya ulang.
     const footnoteEl = document.getElementById('view_curve_footnote');
-    if(absoluteGap > 0){
+    const curveNoteText = (p.curveNote !== undefined ? p.curveNote : computeCurveAutoNote(p.curveS||[])).trim();
+    if(curveNoteText){
       footnoteEl.style.display = 'block';
-      footnoteEl.innerHTML = `* <strong>Footnote analisis deviasi target vs aktual:</strong> teridentifikasi akumulasi deviasi negatif (gap) sebesar <strong>-${absoluteGap.toFixed(1)}%</strong> hingga periode bulan <strong>${lastMonthWithGap}</strong>. Rekomendasi tindakan korektif: diperlukan percepatan mobilisasi logistik cadangan serta restrukturisasi alokasi tim guna mengejar deviasi target pada periode berikutnya.`;
+      footnoteEl.innerText = curveNoteText;
     } else {
       footnoteEl.style.display = 'none';
     }
@@ -1688,16 +1729,28 @@
     }else{
       catatanCard.style.display = 'none';
     }
-    renumberReportSections(!!catatanText);
+
+    // Section "Kendala & tantangan" dan "Pembelajaran (lesson learned)" hanya
+    // ditampilkan kalau benar-benar ada isinya. Kalau kosong, card-nya
+    // disembunyikan total dan nomor section sesudahnya otomatis maju.
+    const hasKendala = (p.challenges||[]).some(r => (r.ch_risk||'').trim() || (r.ch_mitigation||'').trim());
+    const hasLesson = (p.lessons||[]).some(r => (r.ls_main||'').trim() || (r.ls_rec||'').trim());
+    document.getElementById('card_kendala').style.display = hasKendala ? '' : 'none';
+    document.getElementById('card_lesson').style.display = hasLesson ? '' : 'none';
+
+    renumberReportSections({ showCatatan: !!catatanText, showKendala: hasKendala, showLesson: hasLesson });
   }
 
   // Menomori ulang urutan section laporan (1, 2, 3, ...) secara dinamis.
-  // Section "Catatan" hanya diikutsertakan dalam urutan kalau sedang terisi,
-  // sehingga section-section berikutnya (mis. Dokumentasi) tidak pernah
-  // menampilkan nomor yang bolong/loncat.
-  function renumberReportSections(showCatatan){
-    const order = ['progres','kpi','demografi','kurva','jadwal','kendala','lesson','aliansi'];
-    if(showCatatan) order.push('catatan');
+  // Section "Catatan", "Kendala & tantangan", dan "Pembelajaran (lesson learned)"
+  // hanya diikutsertakan dalam urutan kalau sedang terisi/tampil, sehingga
+  // section-section berikutnya tidak pernah menampilkan nomor yang bolong/loncat.
+  function renumberReportSections(opts){
+    const order = ['progres','kpi','demografi','kurva','jadwal'];
+    if(opts.showKendala) order.push('kendala');
+    if(opts.showLesson) order.push('lesson');
+    order.push('aliansi');
+    if(opts.showCatatan) order.push('catatan');
     order.push('dokumentasi');
     order.forEach((secId, idx)=>{
       const el = document.querySelector(`.sec-num[data-sec-id="${secId}"]`);
