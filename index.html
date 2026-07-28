@@ -1153,7 +1153,7 @@
               <label style="font-size:11px; font-weight:700; color:#ea580c;">Berdasarkan jenjang pendidikan</label>
               <table class="input-table">
                 <tbody>
-                  <tr><td>Belum Sekolah</td><td><input type="number" id="${prefix}_edu_belum sekolah" value="${d.bs||0}"></td></tr>
+                  <tr><td>Belum Sekolah</td><td><input type="number" id="${prefix}_edu_bs" value="${d.bs||0}"></td></tr>
                   <tr><td>Siswa SD</td><td><input type="number" id="${prefix}_edu_sd" value="${d.sd||0}"></td></tr>
                   <tr><td>Siswa SMP</td><td><input type="number" id="${prefix}_edu_smp" value="${d.smp||0}"></td></tr>
                   <tr><td>Siswa SMA</td><td><input type="number" id="${prefix}_edu_sma" value="${d.sma||0}"></td></tr>
@@ -1436,14 +1436,21 @@
         female: Number(getVal(prefix,'gen_female'))||0,
         disYes: Number(getVal(prefix,'dis_yes'))||0,
         disNo: Number(getVal(prefix,'dis_no'))||0,
+        // Field-field ini sebelumnya TIDAK pernah tersambung ke penyimpanan,
+        // padahal sudah ada kotak isiannya di form -- makanya walau diisi,
+        // datanya selalu dianggap kosong (0) setiap kali disimpan.
+        bs: Number(getVal(prefix,'edu_bs'))||0,
         sd: Number(getVal(prefix,'edu_sd'))||0,
         smp: Number(getVal(prefix,'edu_smp'))||0,
         sma: Number(getVal(prefix,'edu_sma'))||0,
         pt: Number(getVal(prefix,'edu_pt'))||0,
+        age5: Number(getVal(prefix,'age_5'))||0,
+        age6: Number(getVal(prefix,'age_6'))||0,
         age15: Number(getVal(prefix,'age_15'))||0,
         age25: Number(getVal(prefix,'age_25'))||0,
         age35: Number(getVal(prefix,'age_35'))||0,
-        age45: Number(getVal(prefix,'age_45'))||0
+        age45: Number(getVal(prefix,'age_45'))||0,
+        age55: Number(getVal(prefix,'age_55'))||0
       },
 
       logos: {
@@ -1667,12 +1674,25 @@
 
     const d = p.demografi || {};
     const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
-    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", (d.male+d.female), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
-    pieGrid.innerHTML += createPieChartSvg("Status fisik", (d.disYes+d.disNo), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
-    pieGrid.innerHTML += createPieChartSvg("Jenjang Pendidikan", (d.bs+d.sd+d.smp+d.sma+d.pt), [{label:'belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
-    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", (d.age5+d.age6+d.age15+d.age25+d.age35+d.age45+d.age55), [{label:'< 5', val:d.age5||0, color:'#b45309'}, {label:'6-4', val:d.age6||0, color:'#d97706'}, {label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}, {label:'> 55', val:d.age55||0, color:'#fb923c'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", ((d.male||0)+(d.female||0)), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Status fisik", ((d.disYes||0)+(d.disNo||0)), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang Pendidikan", ((d.bs||0)+(d.sd||0)+(d.smp||0)+(d.sma||0)+(d.pt||0)), [{label:'Belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Kelompok usia", ((d.age5||0)+(d.age6||0)+(d.age15||0)+(d.age25||0)+(d.age35||0)+(d.age45||0)+(d.age55||0)), [{label:'< 5', val:d.age5||0, color:'#b45309'}, {label:'6-14', val:d.age6||0, color:'#d97706'}, {label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}, {label:'> 55', val:d.age55||0, color:'#fb923c'}]);
 
-    const curveRows = p.curveS || [];
+    // Grafik & tabel kurva S hanya ditampilkan sampai bulan sesuai "Tanggal
+    // periode laporan" -- meskipun datanya sudah diisi lebih jauh sampai akhir
+    // periode program. Data bulan-bulan berikutnya TETAP tersimpan di database,
+    // hanya tidak ikut ditampilkan dulu sampai periode laporannya sampai di sana.
+    let curveRows = p.curveS || [];
+    if(p.reportPeriod){
+      const monthCodes = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const rpMonthIdx = parseInt(String(p.reportPeriod).slice(5,7), 10) - 1;
+      const rpMonthCode = monthCodes[rpMonthIdx];
+      if(rpMonthCode){
+        const cutIdx = curveRows.findIndex(r => r.curve_month === rpMonthCode);
+        if(cutIdx >= 0) curveRows = curveRows.slice(0, cutIdx + 1);
+      }
+    }
     const summaryBody = document.getElementById('view_table_curves_summary').querySelector('tbody');
     summaryBody.innerHTML = '';
     let svgPointsPlan = '', svgPointsAct = '', svgElementsGroup = '';
