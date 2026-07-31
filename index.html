@@ -80,6 +80,7 @@
   .row-actions{display:flex;gap:6px;flex-wrap:wrap;}
   .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .filter-bar select{padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;min-width:160px;background:#fffdfb;}
+  .filter-bar input[type="text"]{padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;min-width:200px;background:#fffdfb;font-family:inherit;}
 
   /* ===== FORM INPUT MEAL (dari file user) ===== */
   .meal-card-box { background: #ffffff; border-radius: 8px; border: 1px solid #fed7aa; overflow: hidden; box-shadow: 0 4px 6px rgba(234, 88, 12, 0.05); margin-bottom: 25px; font-family: 'Segoe UI', sans-serif; }
@@ -269,6 +270,10 @@
   <div class="page" id="page-running">
     <div class="card">
       <h2>Project berjalan</h2>
+      <div class="filter-bar">
+        <input type="text" id="searchRunningAdvisor" placeholder="Cari nama Project Advisor..." oninput="renderRunning()">
+        <input type="text" id="searchRunningDonatur" placeholder="Cari nama Donatur..." oninput="renderRunning()">
+      </div>
       <div id="runningTableWrap"></div>
     </div>
   </div>
@@ -277,6 +282,10 @@
   <div class="page" id="page-finish">
     <div class="card">
       <h2>Project finish</h2>
+      <div class="filter-bar">
+        <input type="text" id="searchFinishAdvisor" placeholder="Cari nama Project Advisor..." oninput="renderFinish()">
+        <input type="text" id="searchFinishDonatur" placeholder="Cari nama Donatur..." oninput="renderFinish()">
+      </div>
       <div id="finishTableWrap"></div>
     </div>
   </div>
@@ -821,14 +830,21 @@
   /* ============ PROJECT BERJALAN / FINISH ============ */
   function renderRunning(){
     const wrap = document.getElementById('runningTableWrap');
-    const list = projects.filter(p=>!p.finished);
+    const qAdvisor = (document.getElementById('searchRunningAdvisor').value||'').trim().toLowerCase();
+    const qDonatur = (document.getElementById('searchRunningDonatur').value||'').trim().toLowerCase();
+    const list = projects.filter(p=>{
+      if(p.finished) return false;
+      if(qAdvisor && !(p.pm||'').toLowerCase().includes(qAdvisor)) return false;
+      if(qDonatur && !(p.donatur||'').toLowerCase().includes(qDonatur)) return false;
+      return true;
+    });
     if(list.length===0){
       wrap.innerHTML = '<div class="empty"><div class="big-icon">&#128203;</div>Belum ada project berjalan. Tambahkan project baru di menu Input Project Baru.</div>';
       return;
     }
     wrap.innerHTML = `
       <table class="dashtable">
-        <thead><tr><th>Nama project</th><th>Donatur</th><th>Lokasi</th><th>Progress</th><th>Update terakhir</th><th>Aksi</th></tr></thead>
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Project advisor</th><th>Lokasi</th><th>Progress</th><th>Update terakhir</th><th>Aksi</th></tr></thead>
         <tbody>
           ${list.map(p=>{
             const hist = p.history||[];
@@ -840,6 +856,7 @@
             <tr>
               <td><strong>${p.nama||'-'}</strong></td>
               <td>${p.donatur||'-'}</td>
+              <td>${p.pm||'-'}</td>
               <td>${p.lokasi||'-'}</td>
               <td>
                 <div class="progress-wrap">
@@ -867,19 +884,27 @@
 
   function renderFinish(){
     const wrap = document.getElementById('finishTableWrap');
-    const list = projects.filter(p=>p.finished);
+    const qAdvisor = (document.getElementById('searchFinishAdvisor').value||'').trim().toLowerCase();
+    const qDonatur = (document.getElementById('searchFinishDonatur').value||'').trim().toLowerCase();
+    const list = projects.filter(p=>{
+      if(!p.finished) return false;
+      if(qAdvisor && !(p.pm||'').toLowerCase().includes(qAdvisor)) return false;
+      if(qDonatur && !(p.donatur||'').toLowerCase().includes(qDonatur)) return false;
+      return true;
+    });
     if(list.length===0){
       wrap.innerHTML = '<div class="empty"><div class="big-icon">&#9989;</div>Belum ada project yang selesai. Project akan muncul di sini setelah ditandai selesai dari menu Project Berjalan.</div>';
       return;
     }
     wrap.innerHTML = `
       <table class="dashtable">
-        <thead><tr><th>Nama project</th><th>Donatur</th><th>Lokasi</th><th>Progress</th><th>Tanggal selesai</th><th>Aksi</th></tr></thead>
+        <thead><tr><th>Nama project</th><th>Donatur</th><th>Project advisor</th><th>Lokasi</th><th>Progress</th><th>Tanggal selesai</th><th>Aksi</th></tr></thead>
         <tbody>
           ${list.map(p=>`
             <tr>
               <td><strong>${p.nama||'-'}</strong></td>
               <td>${p.donatur||'-'}</td>
+              <td>${p.pm||'-'}</td>
               <td>${p.lokasi||'-'}</td>
               <td>
                 <div class="progress-wrap">
@@ -1676,7 +1701,7 @@
     const pieGrid = document.getElementById('view_pie_root'); pieGrid.innerHTML = '';
     pieGrid.innerHTML += createPieChartSvg("Jenis kelamin", ((d.male||0)+(d.female||0)), [{label:'Pria', val:d.male||0, color:'#ea580c'}, {label:'Wanita', val:d.female||0, color:'#a16207'}]);
     pieGrid.innerHTML += createPieChartSvg("Status fisik", ((d.disYes||0)+(d.disNo||0)), [{label:'Difabel', val:d.disYes||0, color:'#a16207'}, {label:'Normal', val:d.disNo||0, color:'#c2410c'}]);
-    pieGrid.innerHTML += createPieChartSvg("Jenjang Pendidikan", ((d.bs||0)+(d.sd||0)+(d.smp||0)+(d.sma||0)+(d.pt||0)), [{label:'Belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
+    pieGrid.innerHTML += createPieChartSvg("Jenjang sekolah", ((d.bs||0)+(d.sd||0)+(d.smp||0)+(d.sma||0)+(d.pt||0)), [{label:'Belum sekolah', val:d.bs||0, color:'#b45309'},{label:'SD', val:d.sd||0, color:'#7c2d12'}, {label:'SMP', val:d.smp||0, color:'#ea580c'}, {label:'SMA', val:d.sma||0, color:'#f97316'}, {label:'PT', val:d.pt||0, color:'#a16207'}]);
     pieGrid.innerHTML += createPieChartSvg("Kelompok usia", ((d.age5||0)+(d.age6||0)+(d.age15||0)+(d.age25||0)+(d.age35||0)+(d.age45||0)+(d.age55||0)), [{label:'< 5', val:d.age5||0, color:'#b45309'}, {label:'6-14', val:d.age6||0, color:'#d97706'}, {label:'15-24', val:d.age15||0, color:'#7c2d12'}, {label:'25-34', val:d.age25||0, color:'#ea580c'}, {label:'35-44', val:d.age35||0, color:'#f97316'}, {label:'45-54', val:d.age45||0, color:'#a16207'}, {label:'> 55', val:d.age55||0, color:'#fb923c'}]);
 
     // Grafik & tabel kurva S hanya ditampilkan sampai bulan sesuai "Tanggal
