@@ -1,28 +1,28 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import {  getFirestore,
+import {
+    getFirestore,
     collection,
-    addDoc,
-    setDoc,
-    doc,
     onSnapshot,
-    getDocs,
-    updateDoc,
-    deleteDoc    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    getDocs
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// ============================================================
+// PENTING: Dashboard ini sekarang HANYA MIRROR (read-only) dari SIMP.
+// Semua input/edit/hapus data dilakukan di SIMP, bukan di sini lagi.
+// Konfigurasi di bawah ini SENGAJA diarahkan ke project Firebase SIMP,
+// bukan lagi ke Firebase milik dashboard lama.
+// ============================================================
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Konfigurasi Firebase -- project SIMP (simp-511a4)
 const firebaseConfig = {
-  apiKey: "AIzaSyD0bz3ebac-mVqvmgnPDGVUOp0IBxpoYrw",
-  authDomain: "my-project-d0a38.firebaseapp.com",
-  projectId: "my-project-d0a38",
-  storageBucket: "my-project-d0a38.firebasestorage.app",
-  messagingSenderId: "770032493887",
-  appId: "1:770032493887:web:85b52bf2e8937077af1f8a",
-  measurementId: "G-CTMGF49VW8"
+  apiKey: "AIzaSyBz7ykyV3OLnf1wl2gMTNgITgHwEBLEkPs",
+  authDomain: "simp-511a4.firebaseapp.com",
+  projectId: "simp-511a4",
+  storageBucket: "simp-511a4.firebasestorage.app",
+  messagingSenderId: "638035539856",
+  appId: "1:638035539856:web:494b3bfd0045c7c770a515",
+  measurementId: "G-72YLY7ZNBC"
 };
 
 // Initialize Firebase
@@ -30,17 +30,17 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 window.db = db;
-window.addDoc = addDoc;
 window.collection = collection;
-
-window.setDoc = setDoc;
-window.doc = doc;
 window.getDocs = getDocs;
 window.onSnapshot = onSnapshot;
-window.updateDoc = updateDoc;
-window.deleteDoc = deleteDoc;
 
-console.log("Firebase berhasil terkoneksi");
+// CATATAN: addDoc, setDoc, updateDoc, deleteDoc SENGAJA TIDAK diimpor/
+// diekspos lagi di sini. Kalau ada bagian kode lama yang masih mencoba
+// memanggil window.setDoc / window.deleteDoc dll, itu akan gagal --
+// ini justru bentuk pengaman tambahan supaya dashboard ini benar-benar
+// tidak bisa menulis data ke mana pun.
+
+console.log("Firebase (SIMP - read only) berhasil terkoneksi");
 if (typeof window.initFirestoreSync === 'function') {
   window.initFirestoreSync();
 }
