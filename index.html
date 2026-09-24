@@ -551,24 +551,105 @@
     }
   }
 
-  /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE ============ */
-  // Dipanggil oleh firebase.js setelah koneksi Firestore siap.
-  // Semua perangkat yang membuka halaman ini akan otomatis menerima
-  // perubahan data (tambah/update/hapus) tanpa perlu refresh manual.
+ /* ============ SINKRONISASI REAL-TIME DENGAN FIRESTORE (SIMP) ============ */
+  // Dashboard ini sekarang MIRROR/read-only. Data diambil dari collection
+  // "projects" milik SIMP, lalu diterjemahkan ke bentuk yang dipakai oleh
+  // seluruh kode tampilan & print di bawah (supaya layout/print tidak perlu
+  // diubah sama sekali).
+
+  function mapTableFromSimp(rows, keyMap){
+    if(!Array.isArray(rows)) return [];
+    return rows.map(row=>{
+      const out = {};
+      for(const [simpKey, oldKey] of Object.entries(keyMap)){
+        out[oldKey] = row[simpKey] !== undefined ? row[simpKey] : '';
+      }
+      return out;
+    });
+  }
+
+  function isPastDate(dateStr){
+    if(!dateStr) return false;
+    const d = new Date(dateStr);
+    if(isNaN(d.getTime())) return false;
+    return d < new Date();
+  }
+
+  // Mengubah satu dokumen SIMP menjadi bentuk "project" seperti yang dipakai
+  // dashboard lama (kebalikan dari script migrasi yang dulu dipakai).
+  function transformSimpToOldShape(s){
+    const m = s.monitoring || {};
+    const finished = isPastDate(s.periodeSelesai);
+
+    return {
+      id: s.id,
+      miproId: s.noMipro || '',
+      nama: s.nama || '',
+      donatur: s.donatur || '',
+      jenis: Array.isArray(s.rumpunProgram) ? (s.rumpunProgram[0] || '') : (s.rumpunProgram || ''),
+      lokasi: s.lokasiImplementasi || '',
+      pm: s.advisor || s.pic || '',
+      target: s.nilai || 0,
+      startDate: s.periodeMulai || '',
+      endDate: s.periodeSelesai || '',
+
+      finished: finished,
+      finishedAt: finished
+        ? (s.periodeSelesai ? new Date(s.periodeSelesai).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : null)
+        : null,
+
+      reportPeriod: m.periodeLaporan || '',
+      demografi: m.demografi || {},
+      curveNote: m.curveNote || '',
+      catatan: m.catatan || '',
+      logos: m.logos || { rz: null, mitra: null },
+
+      kpis: mapTableFromSimp(m.kpis, {
+        metrik: 'kpi_name', target: 'kpi_target', realisasi: 'kpi_real', satuan: 'kpi_unit'
+      }),
+      curveS: mapTableFromSimp(m.curveS, {
+        bulan: 'curve_month', targetP: 'curve_p', realisasiA: 'curve_a'
+      }),
+      activities: mapTableFromSimp(m.activities, {
+        nama: 'act_name', progress: 'act_prog', status: 'act_status'
+      }),
+      schedule: mapTableFromSimp(m.jadwal, {
+        nama: 'sch_name', tanggal: 'sch_date', keterangan: 'sch_desc'
+      }),
+      challenges: mapTableFromSimp(s.risiko, {
+        tantangan: 'ch_risk', dampak: 'ch_impact', mitigasi: 'ch_mitigation', status: 'ch_status'
+      }),
+      lessons: mapTableFromSimp(s.lessonLearned, {
+        pembelajaran: 'ls_main', rekomendasi: 'ls_rec'
+      }),
+      stakeholders: mapTableFromSimp(s.stakeholder, {
+        instansi: 'sh_name', peran: 'sh_role', followUp: 'sh_act'
+      }),
+      photos: (m.foto || []).map((data, i) => ({
+        data: data,
+        label: (m.fotoCaptions && m.fotoCaptions[i]) || ''
+      })),
+
+      // Dashboard lama punya field "history" (log update manual per bulan).
+      // SIMP tidak punya konsep ini, jadi dikosongkan.
+      history: []
+    };
+  }
+
   function initFirestoreSync(){
     if(!window.db || !window.collection || !window.onSnapshot){
       console.error('Firestore belum siap, sinkronisasi dibatalkan.');
       return;
     }
     window.onSnapshot(window.collection(window.db, "projects"), (snapshot)=>{
-      projects = snapshot.docs.map(d=>d.data());
+      projects = snapshot.docs.map(d => transformSimpToOldShape(d.data()));
       save(); // simpan juga sebagai cache lokal untuk render instan saat load berikutnya
       applyAuthUI();
       renderHome();
       renderRunning();
       renderFinish();
     }, (err)=>{
-      console.error('Gagal sinkronisasi real-time dari Firestore:', err);
+      console.error('Gagal sinkronisasi real-time dari Firestore SIMP:', err);
       alert(explainFirestoreError(err));
     });
   }
@@ -604,29 +685,9 @@
       + '\nDetail: ' + (err && err.message ? err.message : String(err));
   }
 
-  // Menulis satu project (baru atau update) ke Firestore.
-  async function syncProjectToFirestore(project){
-    try{
-      await window.setDoc(window.doc(window.db, "projects", project.id), project);
-      return true;
-    }catch(err){
-      console.error('Gagal menyimpan ke database:', err);
-      alert('Laporan tidak bisa disimpan.\n\n' + explainFirestoreError(err));
-      return false;
-    }
-  }
-
-  // Menghapus satu project dari Firestore.
-  async function deleteProjectFromFirestore(id){
-    try{
-      await window.deleteDoc(window.doc(window.db, "projects", id));
-      return true;
-    }catch(err){
-      console.error('Gagal menghapus dari database:', err);
-      alert('Project tidak bisa dihapus.\n\n' + explainFirestoreError(err));
-      return false;
-    }
-  }
+  // Dashboard ini sekarang read-only. Fungsi syncProjectToFirestore dan
+  // deleteProjectFromFirestore SENGAJA DIHAPUS supaya tidak ada jalur untuk
+  // menulis/menghapus data SIMP dari dashboard mirror ini.
   function uid(){ return 'p_' + Date.now() + '_' + Math.floor(Math.random()*1000); }
   function esc(v){ return (v===undefined||v===null) ? '' : String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function fmtRupiah(n){ return 'Rp ' + Number(n||0).toLocaleString('id-ID'); }
